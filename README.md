@@ -6,7 +6,7 @@
 [![PyPI version](https://img.shields.io/badge/pypi-0.1.0-orange.svg)](https://pypi.org/project/harpy-cp/)
 
 > **The AI-assisted Competitive Programming & Technical Interview Toolkit.**
-> Turn raw problem statements or whiteboard screenshots into LeetCode-style templates, generate guaranteed test suites with a reference Python oracle, and sync directly with CPH and fast local test runners.
+> Turn raw problem statements or whiteboard screenshots into LeetCode-style templates, generate guaranteed test suites with a reference Python oracle, and sync directly with CPH and fast local test runners across any IDE.
 
 ---
 
@@ -20,10 +20,9 @@
 - 🧪 **Fast Local Test Runner (`harpy test`)**:
   - Compiles C++ (`g++ -O3 -std=c++17`), Python, and Java.
   - Formats results with color-coded tables, execution time, and side-by-side failure diffs.
-- 🤖 **Native Model Context Protocol (MCP) & AI Skill**:
-  - Drop a screenshot of an exam question, contest problem, or whiteboard into chat.
-  - The AI assistant formulates the problem, generates tests, sets up your starter template, and tests your code.
-- 🔇 **Distraction-Free Coding**: Auto-configures `.tabignore` to silence intrusive inline AI autocomplete while you code.
+- 🤖 **Universal Model Context Protocol (MCP) & AI Assistant Support**:
+  - Works natively with **VS Code**, **Antigravity**, **Cursor**, **Windsurf**, **Claude Desktop**, **Zed**, and terminal-first workflows.
+- 🔇 **Distraction-Free Coding**: Auto-configures `.tabignore` to silence intrusive inline AI autocomplete while you code algorithms.
 
 ---
 
@@ -54,7 +53,7 @@ pip install -e .
 # Auto-installs Antigravity skill & registers Harpy MCP server
 harpy setup-ai
 
-# Enable fast tab-completion for problem slugs
+# Enable fast tab-completion for problem slugs and solutions
 harpy completion install
 ```
 
@@ -68,7 +67,9 @@ In any folder where you want to practice problems (e.g. `~/dsa-prep`):
 mkdir -p ~/dsa-prep && cd ~/dsa-prep
 harpy init
 ```
-This scaffolds a `problems/` directory and creates `.tabignore` so inline ghost AI suggestions don't distract you while solving problems.
+**What `harpy init` sets up:**
+- Scaffolds a `problems/` directory.
+- Configures `.tabignore` and `.antigravityignore` so inline ghost AI suggestions don't distract you while solving problems.
 
 ### Test Solutions Locally
 ```bash
@@ -94,26 +95,43 @@ Output:
 ```
 
 ### Push to CPH Extension
-Push problem metadata and test cases to your active CPH listener in VS Code / Antigravity:
+Push problem metadata and test cases to your active CPH listener in VS Code or Antigravity:
 ```bash
 harpy push problems/maximum-subarray-sum
 ```
 
 ---
 
-## 🤖 AI Assistant Integration
+## 🛠️ IDE Setup Guide
 
-Harpy exposes tools over the **Model Context Protocol (MCP)**:
-- `harpy_setup_problem`: Formulate problem specifications and starter code.
-- `harpy_oracle_generate_tests`: Run reference Python code to generate verified test cases.
-- `harpy_sync_cph`: Push tests to CPH over HTTP and `.cph/` files.
-- `harpy_test_solution`: Run solution and report CE/WA/TLE/RTE with execution times.
+Harpy connects to any editor via two open standards:
+1. **Model Context Protocol (MCP)**: Lets AI assistants formulate problems, run the test oracle, and test code.
+2. **CPH Protocol & `.cph/` Files**: Integrates directly with the Competitive Programming Helper extension.
 
-### Antigravity IDE
-Run `harpy setup-ai` and Antigravity will automatically register the MCP server and install the `harpy-cp` skill globally.
+### IDE Compatibility Matrix
 
-### Cursor
-Add to `.cursor/mcp.json`:
+| IDE / Editor | AI Assistant (MCP) | CPH GUI Test Runner | Integrated CLI | Autocomplete Mute (`.tabignore`) |
+|---|:---:|:---:|:---:|:---:|
+| **VS Code** | ✔ (Roo Code / Cline / Copilot) | ✔ (CPH Extension) | ✔ | ✔ |
+| **Google Antigravity** | ✔ (Native 1-Command) | ✔ (CPH Extension) | ✔ | ✔ |
+| **Cursor** | ✔ (Native Composer MCP) | ✔ (CPH via Open VSX/Marketplace) | ✔ | ✔ |
+| **Windsurf** | ✔ (Native Cascade MCP) | ✔ (CPH Extension) | ✔ | ✔ |
+| **Zed** | ✔ (Context Servers) | — (Uses CLI `harpy test`) | ✔ | ✔ |
+| **Claude Desktop** | ✔ (Native MCP) | — (Uses CLI `harpy test`) | ✔ | ✔ |
+| **Neovim / JetBrains** | — (Terminal / LLM plugins) | ✔ (Competitive Companion / CLI) | ✔ | ✔ |
+
+---
+
+### 1. VS Code
+
+#### CPH Extension Setup
+1. Install the **Competitive Programming Helper (cph)** extension from the VS Code Marketplace:
+   `ext install divyanshuaggarwal.competitive-programming-helper`
+2. When you push a problem using `harpy push <slug>`, it opens directly in the CPH sidebar with all test cases preloaded.
+3. Offline support: Harpy automatically creates `.cph/.<slug>.cpp_<hash>.prob` files so tests load even without an active network connection.
+
+#### AI Assistant (Roo Code / Cline / GitHub Copilot Chat)
+Add Harpy to your MCP settings file (e.g. `cline_mcp_settings.json` or `.vscode/mcp.json`):
 ```json
 {
   "mcpServers": {
@@ -125,8 +143,78 @@ Add to `.cursor/mcp.json`:
 }
 ```
 
-### Claude Desktop
-Add to `claude_desktop_config.json`:
+---
+
+### 2. Google Antigravity IDE
+
+Harpy has first-class native integration with Antigravity:
+1. Run the one-command installer:
+   ```bash
+   harpy setup-ai
+   ```
+   This automatically:
+   - Registers the MCP server in `~/.gemini/config/mcp_config.json`.
+   - Installs the multimodal `harpy-cp` skill globally in `~/.gemini/config/skills/harpy-cp/SKILL.md`.
+2. Open any folder (`harpy init`), drop a screenshot of a problem or contest into chat, and say:
+   > *"Set this problem up."*
+3. Antigravity automatically:
+   - Formulates `problem.md`.
+   - Writes `<slug>.cpp` with typed LeetCode `solve(...)` signature.
+   - Runs the reference Python oracle to verify sample, edge, and stress cases.
+   - Syncs with CPH and gives you a clickable file link to your code.
+
+---
+
+### 3. Cursor
+
+1. Open **Cursor Settings** (`Cmd+,` or `Ctrl+,`) → **Features** → **MCP**.
+2. Click **+ Add New MCP Server**:
+   - **Name**: `harpy`
+   - **Type**: `command`
+   - **Command**: `python3 -m harpy.mcp_server`
+3. Alternatively, create a `.cursor/mcp.json` file in your workspace:
+   ```json
+   {
+     "mcpServers": {
+       "harpy": {
+         "command": "python3",
+         "args": ["-m", "harpy.mcp_server"]
+       }
+     }
+   }
+   ```
+4. Add to your `.cursorrules` (optional, for optimal prompt alignment):
+   ```markdown
+   When asked to set up a competitive programming or algorithm problem:
+   1. Use the `harpy_setup_problem` tool.
+   2. Leave the body of `solve(...)` empty for the user with pre-filled typed parameters from `main()`.
+   3. Write a reference Python oracle and use `harpy_oracle_generate_tests`.
+   4. Sync to CPH using `harpy_sync_cph`.
+   ```
+
+---
+
+### 4. Windsurf (Codeium)
+
+Windsurf supports MCP via Cascade:
+1. Open or create `~/.codeium/windsurf/mcp_config.json` (or workspace `.windsurf/mcp.json`):
+   ```json
+   {
+     "mcpServers": {
+       "harpy": {
+         "command": "python3",
+         "args": ["-m", "harpy.mcp_server"]
+       }
+     }
+   }
+   ```
+2. Restart Cascade. Harpy tools will appear with a green indicator in the tools list.
+
+---
+
+### 5. Claude Desktop
+
+In `~/.config/Claude/claude_desktop_config.json` (Linux/macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 ```json
 {
   "mcpServers": {
@@ -137,6 +225,39 @@ Add to `claude_desktop_config.json`:
   }
 }
 ```
+
+---
+
+### 6. Zed Editor
+
+Zed supports context servers via `~/.config/zed/settings.json`:
+```json
+{
+  "context_servers": {
+    "harpy": {
+      "command": {
+        "path": "python3",
+        "args": ["-m", "harpy.mcp_server"]
+      }
+    }
+  }
+}
+```
+
+---
+
+### 7. Neovim & Terminal-First Workflow
+
+For Neovim, tmux, and terminal-first users:
+1. **Interactive Testing**: Run `harpy test <slug>` in a side tmux pane, floating terminal, or Neovim terminal (`:terminal harpy test <slug>`).
+2. **Watch Mode**: Use with `entr` or `nodemon` to automatically test whenever you save your solution:
+   ```bash
+   ls problems/<slug>/*.cpp | entr -c harpy test <slug>
+   ```
+3. **Tab Completion**: Auto-completes subcommands, problem slugs, and solution files:
+   ```bash
+   harpy test lexi<TAB>
+   ```
 
 ---
 
@@ -167,7 +288,7 @@ pytest -v
 
 Build standalone package:
 ```bash
-python -m build
+python3 -m build
 ```
 
 ---
