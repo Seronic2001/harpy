@@ -1,28 +1,28 @@
 # Harpy 🦅
 
-[![CI](https://github.com/seronic/harpy/actions/workflows/ci.yml/badge.svg)](https://github.com/seronic/harpy/actions/workflows/ci.yml)
+[![CI](https://github.com/Seronic2001/harpy/actions/workflows/ci.yml/badge.svg)](https://github.com/Seronic2001/harpy/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 [![PyPI version](https://img.shields.io/badge/pypi-0.1.0-orange.svg)](https://pypi.org/project/harpy-cp/)
 
-> **The AI-assisted Competitive Programming & Technical Interview Toolkit.**
-> Turn raw problem statements or whiteboard screenshots into LeetCode-style templates, generate guaranteed test suites with a reference Python oracle, and sync directly with CPH and fast local test runners across any IDE.
+> **A CLI toolkit and Model Context Protocol (MCP) server for competitive programming.**
+> Converts problem statements into decoupled C++ templates, runs brute-force differential testing to eliminate AI test-case hallucination, and synchronizes test cases directly with CPH and local compilers.
 
 ---
 
 ## ✨ Features
 
-- 📑 **LeetCode-Style Starter Code**: Converts problem descriptions into clean, typed `solve(...)` function templates with fast I/O in `main()`. You focus purely on the algorithm.
-- 🎯 **Oracle-Verified Test Cases**: Never guess edge cases. A local reference Python oracle runs locally to generate authoritative, verified expected outputs for samples, boundary conditions, and stress tests.
+- 📑 **Decoupled Code Templates**: Converts problem descriptions into clean, typed `solve(...)` function templates with fast I/O in `main()`, separating I/O parsing from core algorithmic logic.
+- 🎯 **Brute-Force Differential Testing**: Eliminates AI test-case hallucination. Runs a simple brute-force Python script locally across edge cases, boundary conditions ($N=0, 1$, negative numbers), and randomized stress tests to generate 100% verified expected outputs.
 - ⚡ **Competitive Programming Helper (CPH) Sync**:
   - Live HTTP dispatch to VS Code / Antigravity CPH extension on port `27121`.
   - Generates native `.cph/` `.prob` files directly for offline use.
 - 🧪 **Fast Local Test Runner (`harpy test`)**:
   - Compiles C++ (`g++ -O3 -std=c++17`), Python, and Java.
   - Formats results with color-coded tables, execution time, and side-by-side failure diffs.
-- 🤖 **Universal Model Context Protocol (MCP) & AI Assistant Support**:
-  - Works natively with **VS Code**, **Antigravity**, **Cursor**, **Windsurf**, **Claude Desktop**, **Zed**, and terminal-first workflows.
-- 🔇 **Distraction-Free Coding**: Auto-configures `.tabignore` to silence intrusive inline AI autocomplete while you code algorithms.
+- 🤖 **Universal Model Context Protocol (MCP) Server**:
+  - Exposes deterministic tools (`setup_problem`, `oracle_generate_tests`, `sync_cph`, `test_solution`) for coding agents in **VS Code**, **Antigravity**, **Cursor**, **Windsurf**, **Claude Desktop**, and **Zed**.
+- 🔇 **Distraction-Free Workspace**: Auto-configures `.tabignore` to silence intrusive inline AI autocomplete while you code algorithms.
 
 ---
 
@@ -42,7 +42,7 @@ pip install harpy-cp
 
 Or install from source:
 ```bash
-git clone https://github.com/seronic/harpy.git
+git clone https://github.com/Seronic2001/harpy.git
 cd harpy
 pip install -e .
 ```
@@ -105,7 +105,7 @@ harpy push problems/maximum-subarray-sum
 ## 🛠️ IDE Setup Guide
 
 Harpy connects to any editor via two open standards:
-1. **Model Context Protocol (MCP)**: Lets AI assistants formulate problems, run the test oracle, and test code.
+1. **Model Context Protocol (MCP)**: Lets AI assistants formulate problems, run brute-force differential testing, and execute test runners.
 2. **CPH Protocol & `.cph/` Files**: Integrates directly with the Competitive Programming Helper extension.
 
 ### IDE Compatibility Matrix
@@ -160,7 +160,7 @@ Harpy has first-class native integration with Antigravity:
 3. Antigravity automatically:
    - Formulates `problem.md`.
    - Writes `<slug>.cpp` with typed LeetCode `solve(...)` signature.
-   - Runs the reference Python oracle to verify sample, edge, and stress cases.
+   - Runs the brute-force Python script to verify sample, edge, and stress cases.
    - Syncs with CPH and gives you a clickable file link to your code.
 
 ---
@@ -188,7 +188,7 @@ Harpy has first-class native integration with Antigravity:
    When asked to set up a competitive programming or algorithm problem:
    1. Use the `harpy_setup_problem` tool.
    2. Leave the body of `solve(...)` empty for the user with pre-filled typed parameters from `main()`.
-   3. Write a reference Python oracle and use `harpy_oracle_generate_tests`.
+   3. Write a brute-force Python script and use `harpy_oracle_generate_tests`.
    4. Sync to CPH using `harpy_sync_cph`.
    ```
 
@@ -271,7 +271,7 @@ problems/<slug>/
 ├── <slug>.cpp         # Starter template with pre-filled typed solve(...)
 ├── tests/
 │   ├── in_01.txt      # Input for test case 1
-│   ├── out_01.txt     # Oracle-verified output for test case 1
+│   ├── out_01.txt     # Verified expected output for test case 1
 │   └── ...
 └── .cph/
     └── .<slug>.cpp_<hash>.prob  # Native CPH offline test file
