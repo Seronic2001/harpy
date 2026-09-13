@@ -1,6 +1,6 @@
 ---
 name: harpy-cp
-description: Formulates algorithm problems from uploaded images or raw text into LeetCode-style markdown specifications, generates verified test cases using a Python reference oracle, creates a starter <problem_slug>.cpp file with an empty void solve() for the user to implement, syncs with CPH, and tests solutions.
+description: Formulates algorithm problems from uploaded images or raw text into LeetCode-style markdown specifications, generates verified test cases using a Python reference oracle, creates a starter <problem_slug>.cpp file with an empty solve(...) function with prefilled parameters for the user to implement, syncs with CPH, and tests solutions.
 ---
 
 # Harpy Competitive Programming Workflow

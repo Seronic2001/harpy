@@ -32,7 +32,7 @@ _harpy_completions()
         cword=$COMP_CWORD
     fi
 
-    local commands="init test push completion --help --version"
+    local commands="init test push setup-ai completion --help --version"
 
     if [ "$cword" -eq 1 ]; then
         COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
@@ -274,6 +274,69 @@ def cmd_init(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_setup_ai(args: argparse.Namespace) -> int:
+    """Setup Harpy AI skill and MCP configuration for Antigravity, Cursor, and Claude Desktop."""
+    home = Path.home()
+    
+    # 1. Locate or read bundled skill
+    bundled_skill_path = Path(__file__).resolve().parent.parent / "skills" / "harpy-cp" / "SKILL.md"
+    if bundled_skill_path.exists():
+        skill_content = bundled_skill_path.read_text(encoding="utf-8")
+    else:
+        # Fallback embedded skill content
+        skill_content = (
+            "---\n"
+            "name: harpy-cp\n"
+            "description: Formulates algorithm problems from uploaded images or raw text into LeetCode-style markdown specifications, generates verified test cases using a Python reference oracle, creates a starter <problem_slug>.cpp file with an empty solve(...) function with prefilled parameters for the user to implement, syncs with CPH, and tests solutions.\n"
+            "---\n\n"
+            "# Harpy Competitive Programming Workflow\n"
+        )
+
+    # 2. Install skill to Antigravity global config
+    gemini_skills_dir = home / ".gemini" / "config" / "skills" / "harpy-cp"
+    gemini_skills_dir.mkdir(parents=True, exist_ok=True)
+    (gemini_skills_dir / "SKILL.md").write_text(skill_content, encoding="utf-8")
+    console.print(f"[bold green]✔ Installed Antigravity skill to:[/bold green] {gemini_skills_dir / 'SKILL.md'}")
+
+    # 3. Configure or update ~/.gemini/config/mcp_config.json
+    mcp_config_path = home / ".gemini" / "config" / "mcp_config.json"
+    mcp_config: dict = {}
+    if mcp_config_path.exists():
+        try:
+            mcp_config = json.loads(mcp_config_path.read_text(encoding="utf-8"))
+        except Exception:
+            mcp_config = {}
+
+    mcp_servers = mcp_config.setdefault("mcpServers", {})
+    python_exe = sys.executable
+    mcp_servers["harpy"] = {
+        "command": python_exe,
+        "args": ["-m", "harpy.mcp_server"],
+    }
+    mcp_config_path.parent.mkdir(parents=True, exist_ok=True)
+    mcp_config_path.write_text(json.dumps(mcp_config, indent=2), encoding="utf-8")
+    console.print(f"[bold green]✔ Registered MCP server in:[/bold green] {mcp_config_path}")
+
+    # 4. Print MCP snippet for Claude Desktop and Cursor
+    cursor_snippet = json.dumps({
+        "mcpServers": {
+            "harpy": {
+                "command": "python3",
+                "args": ["-m", "harpy.mcp_server"]
+            }
+        }
+    }, indent=2)
+
+    console.print(Panel(
+        f"[bold cyan]Cursor & Claude Desktop Configuration[/bold cyan]\n\n"
+        f"Add the following to your [yellow]claude_desktop_config.json[/yellow] or [yellow].cursor/mcp.json[/yellow]:\n\n"
+        f"[green]{cursor_snippet}[/green]",
+        title="🤖 AI Integration",
+        expand=False
+    ))
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="harpy",
@@ -307,6 +370,9 @@ def main() -> int:
     comp_parser = subparsers.add_parser("completion", help="Generate or install shell completion")
     comp_parser.add_argument("shell", nargs="?", default="install", choices=["bash", "install"], help="Action ('install' or 'bash')")
 
+    # Setup AI & MCP
+    subparsers.add_parser("setup-ai", help="Configure Harpy AI skill and MCP server for Antigravity, Cursor, and Claude")
+
     args = parser.parse_args()
 
     if args.command == "init":
@@ -317,6 +383,8 @@ def main() -> int:
         return cmd_push(args)
     elif args.command == "completion":
         return cmd_completion(args)
+    elif args.command == "setup-ai":
+        return cmd_setup_ai(args)
     else:
         parser.print_help()
         return 0
