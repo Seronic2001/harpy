@@ -1,60 +1,68 @@
 ---
 name: harpy-cp
-description: Formulates algorithm problems from uploaded images or raw text into LeetCode-style markdown specifications, generates verified test cases using a Python reference oracle, syncs with CPH (Competitive Programming Helper), and tests solutions.
+description: Formulates algorithm problems from uploaded images or raw text into LeetCode-style markdown specifications, generates verified test cases using a Python reference oracle, creates a starter <problem_slug>.cpp file with an empty void solve() for the user to implement, syncs with CPH, and tests solutions.
 ---
 
 # Harpy Competitive Programming Workflow
 
-Use this skill whenever the user:
-- Uploads an image, screenshot, whiteboard photo, or text snippet of an algorithm / coding problem.
-- Asks to format a problem in LeetCode/Codeforces style.
-- Asks to generate test cases or corner cases for a problem.
-- Wants to set up a CPH (Competitive Programming Helper) workspace or test a solution.
+Follow this procedure whenever the user:
+- Uploads an image, screenshot, whiteboard photo, or text of a coding/algorithm problem into chat.
+- Asks to set up a problem in C++ (or Python).
 
 ---
 
-## The Step-by-Step Procedure
+## The Workflow Protocol
 
-### Step 1: Multimodal Problem Extraction & Standardization
-When an image or problem text is provided:
-1. Extract and standardize the problem details:
-   - **Title**: Clean descriptive name (e.g., "Subarray Sum Equals K").
+### 1. Extract & Standardize Problem
+From the provided image or text:
+1. Determine:
+   - **Title**: Clean descriptive title (e.g., "Maximum Subarray Sum").
+   - **Slug**: Kebab-case name (e.g., `maximum-subarray-sum`).
    - **Difficulty**: "Easy", "Medium", or "Hard".
-   - **Tags**: Algorithms/data structures involved (e.g., `["Prefix Sum", "Hash Table"]`).
-   - **Description**: Precise explanation of the problem statement.
-   - **Input Format**: Describe stdin lines, array dimensions, tokens.
-   - **Output Format**: Expected stdout.
-   - **Constraints**: Express with LaTeX math (e.g., `$1 \le N \le 10^5$`, `$-10^9 \le A_i \le 10^9$`, Time: 1000 ms, Memory: 256 MB).
-2. Call `harpy_setup_problem` or run the Python API:
-   ```python
-   from harpy.formatter import create_problem_workspace
-   from harpy.models import ProblemSpec
-   # Sets up <slug>/problem.md, <slug>/solution.cpp, <slug>/tests/
+   - **Topics**: e.g., `["Dynamic Programming", "Two Pointers"]`.
+   - **Description**: Clear problem statement.
+   - **Input & Output Format**: Precise specifications.
+   - **Constraints**: Express with LaTeX math (e.g., `$1 \le N \le 10^5$`).
+2. Run `harpy_setup_problem` or Harpy API to create:
+   - `problems/<slug>/problem.md`
+   - `problems/<slug>/<slug>.cpp`
+
+### 2. File Template Requirement: User Implements `void solve()`
+The starter code file **must be named `<problem_slug>.cpp`** and must:
+1. Include the problem description, constraints, and sample examples in comments at the top.
+2. Provide standard competitive programming fast I/O in `main()`.
+3. Provide a `void solve()` function whose body is **left empty for the user to write**:
+   ```cpp
+   void solve() {
+       // Write your solution here
+   }
    ```
+> **CRITICAL RULE**: Do **NOT** implement the solution logic in `<slug>.cpp`. The user will write their own code!
 
-### Step 2: Test Generation with Python Reference Oracle
-**Never guess or hallucinate outputs for non-trivial inputs.**
-1. Write a correct reference solution in Python (simulation, greedy, or brute force).
-2. Prepare a diverse set of test inputs:
-   - **Sample Cases**: Taken directly from the problem statement.
-   - **Edge/Corner Cases**:
-     - Minimal constraint ($N = 0$ or $N = 1$).
-     - Maximal constraint values (overflow checks, large numbers).
-     - Empty inputs, all negative, all identical elements.
-     - Sorted, reverse-sorted, or alternating values.
-   - **Stress/Random Cases**: Generated within constraints.
-3. Call `harpy_oracle_generate_tests` to execute the reference Python code on the inputs and save the verified outputs.
+### 3. Generate Verified Test Cases (Python Reference Oracle)
+1. Write a correct reference solution in Python (simulation, brute force, or mathematical).
+2. Generate comprehensive test input cases:
+   - Sample cases from the problem statement.
+   - Corner/edge cases ($N=0, 1$, bounds, negative numbers, identical values).
+   - Stress/random cases.
+3. Run `harpy_oracle_generate_tests` to execute the reference Python code and produce verified test cases in `tests/` and `problem.json`.
 
-### Step 3: CPH Sync & Workspace Setup
-1. Call `harpy_sync_cph(problem_dir)`:
-   - Sends an HTTP POST to CPH on port `27121` (Competitive Companion protocol). If CPH is active in VS Code, the problem pops up immediately.
-   - Also writes `.cph/.<solution>_<hash>.prob` directly in the problem folder, guaranteeing tests are available offline as soon as the file is opened in VS Code.
-2. Link the user to `problem.md` and `solution.cpp` (or `solution.py`).
+### 4. Sync with CPH
+1. Run `harpy_sync_cph` to:
+   - Dispatch over HTTP to CPH (port 27121) so it opens in the editor if active.
+   - Write `.cph/.<slug>.cpp_<hash>.prob` for offline support.
 
-### Step 4: Testing Solutions
-When the user implements or requests to test their solution:
-1. Call `harpy_test_solution(solution_path)` or run CLI:
-   ```bash
-   ./.venv/bin/harpy test <slug>/solution.cpp
-   ```
-2. Report the color-coded results: execution time, memory, pass/fail status, and any diff details.
+### 5. Present to the User
+Report:
+- Clean summary of the problem and constraints.
+- Direct clickable link to [`problems/<slug>/<slug>.cpp`](file:///home/seronic/Projects/harpy/problems/<slug>/<slug>.cpp).
+- Summary of the generated test cases (samples, edge cases).
+- The exact command the user can run when ready:
+  ```bash
+  harpy test problems/<slug>/<slug>.cpp
+  ```
+
+### 6. Testing the User's Solution
+When the user says "test my code", "run tests", or asks for help debugging:
+1. Run `harpy_test_solution` or execute `harpy test problems/<slug>/<slug>.cpp`.
+2. Display the status (PASS / FAIL / TLE / RTE) and explain any failures if requested.

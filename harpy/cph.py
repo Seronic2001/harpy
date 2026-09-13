@@ -87,4 +87,15 @@ def write_cph_file(
     }
 
     prob_file.write_text(json.dumps(cph_data, indent=2), encoding="utf-8")
+
+    # Also register companion file if both exist (e.g. <slug>.cpp and solution.cpp)
+    for alt_name in ("solution.cpp", f"{spec.get_slug()}.cpp"):
+        alt_path = sol.parent / alt_name
+        if alt_path != sol and alt_path.exists():
+            alt_hash = hashlib.md5(str(alt_path.resolve()).encode("utf-8")).hexdigest()[:16]
+            alt_prob = cph_dir / f".{alt_name}_{alt_hash}.prob"
+            alt_data = dict(cph_data)
+            alt_data["srcPath"] = str(alt_path.resolve())
+            alt_prob.write_text(json.dumps(alt_data, indent=2), encoding="utf-8")
+
     return prob_file
