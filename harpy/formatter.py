@@ -134,7 +134,6 @@ def create_problem_workspace(
     <base_dir>/<slug>/
        problem.md
        <slug>.<lang> (main starter file for the user)
-       solution.<lang> (symlinked/mirrored)
        tests/
           in_1.txt, out_1.txt, ...
     """
@@ -149,16 +148,12 @@ def create_problem_workspace(
     # 2. Write starter code named <slug>.<ext>
     ext = "cpp" if lang == "cpp" else ("py" if lang in ("py", "python") else "java")
     main_code_path = base / f"{slug}.{ext}"
-    compat_code_path = base / f"solution.{ext}"
 
     generator = DEFAULT_GENERATORS.get(lang, generate_cpp_starter)
     starter_code = generator(spec)
 
     if not main_code_path.exists():
         main_code_path.write_text(starter_code, encoding="utf-8")
-
-    if not compat_code_path.exists():
-        compat_code_path.write_text(starter_code, encoding="utf-8")
 
     # 3. Write test cases
     tests_dir = base / "tests"
@@ -175,6 +170,5 @@ def create_problem_workspace(
         "dir": base,
         "markdown": md_path,
         "solution": main_code_path,
-        "compat_solution": compat_code_path,
         "tests_dir": tests_dir,
     }

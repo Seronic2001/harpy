@@ -165,8 +165,13 @@ def harpy_sync_cph(
     if solution_file:
         sol_path = Path(solution_file).resolve()
     else:
-        candidates = list(prob_path.glob("solution.*"))
-        sol_path = candidates[0] if candidates else (prob_path / "solution.cpp")
+        slug = spec.get_slug()
+        slug_matches = list(prob_path.glob(f"{slug}.*"))
+        if slug_matches:
+            sol_path = slug_matches[0]
+        else:
+            candidates = list(prob_path.glob("solution.*"))
+            sol_path = candidates[0] if candidates else (prob_path / f"{slug}.cpp")
 
     # 1. Write .cph file directly
     cph_file = write_cph_file(spec, sol_path)
