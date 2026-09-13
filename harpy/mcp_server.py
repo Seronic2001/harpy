@@ -27,6 +27,8 @@ def harpy_setup_problem(
     memory_limit_mb: int = 256,
     lang: str = "cpp",
     base_dir: str = ".",
+    cpp_signature: Optional[str] = None,
+    cpp_main_parser: Optional[str] = None,
 ) -> str:
     """
     Format a competitive programming / LeetCode problem, generate markdown,
@@ -42,6 +44,8 @@ def harpy_setup_problem(
         constraints=constraints or [],
         time_limit_ms=time_limit_ms,
         memory_limit_mb=memory_limit_mb,
+        cpp_signature=cpp_signature,
+        cpp_main_parser=cpp_main_parser,
     )
 
     ws = create_problem_workspace(spec, base_dir=base_dir, lang=lang)

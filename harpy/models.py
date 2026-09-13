@@ -47,6 +47,8 @@ class ProblemSpec(BaseModel):
     memory_limit_mb: int = 256
     testcases: List[TestCase] = Field(default_factory=list)
     reference_code: Optional[str] = None
+    cpp_signature: Optional[str] = None
+    cpp_main_parser: Optional[str] = None
     starter_templates: Dict[str, str] = Field(default_factory=dict)
 
     def get_slug(self) -> str:

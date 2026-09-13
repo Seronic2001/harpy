@@ -29,7 +29,7 @@ def generate_cpp_starter(spec: ProblemSpec) -> str:
 
     examples_comment = "\n *\n * ".join(examples_block) if examples_block else "See problem description."
 
-    return f"""/**
+    header = f"""/**
  * Problem: {spec.title}
  * Difficulty: {spec.difficulty}
  * Time Limit: {spec.time_limit_ms} ms | Memory Limit: {spec.memory_limit_mb} MB
@@ -47,24 +47,55 @@ def generate_cpp_starter(spec: ProblemSpec) -> str:
 #include <bits/stdc++.h>
 using namespace std;
 
-void solve() {{
+"""
+
+    if spec.cpp_signature and spec.cpp_main_parser:
+        # Determine default return statement based on signature return type
+        ret_type = spec.cpp_signature.strip().split()[0]
+        ret_statement = ""
+        if ret_type == "string":
+            ret_statement = '    return "";\n'
+        elif ret_type in ("int", "long", "long long"):
+            ret_statement = "    return 0;\n"
+        elif ret_type == "bool":
+            ret_statement = "    return false;\n"
+        elif ret_type.startswith("vector"):
+            ret_statement = "    return {};\n"
+
+        code_body = f"""{spec.cpp_signature} {{
     // Write your solution here
-}}
+{ret_statement}}}
 
 int main() {{
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+
+{spec.cpp_main_parser.rstrip()}
+
+    return 0;
+}}
+"""
+    else:
+        code_body = """void solve() {
+    // Write your solution here
+}
+
+int main() {
     ios_base::sync_with_stdio(false);
     cin.tie(NULL);
 
     int t = 1;
     // cin >> t; // Uncomment if multiple test cases exist per run
 
-    while (t--) {{
+    while (t--) {
         solve();
-    }}
+    }
 
     return 0;
-}}
+}
 """
+
+    return header + code_body
 
 
 def generate_python_starter(spec: ProblemSpec) -> str:

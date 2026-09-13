@@ -31,19 +31,31 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-void solve() {
+/**
+ * LeetCode-style function:
+ * @param n     Row dimension of the grid
+ * @param m     Column dimension of the grid
+ * @param k     Exact number of steps in the walk
+ * @param grid  The N x M character grid
+ * @return      The lexicographically smallest path, or "IMPOSSIBLE"
+ */
+string solve(int n, int m, int k, vector<string>& grid) {
     // Write your solution here
+
+    return "";
 }
 
 int main() {
     ios_base::sync_with_stdio(false);
     cin.tie(NULL);
 
-    int t = 1;
-    // cin >> t; // Uncomment if multiple test cases exist per run
-
-    while (t--) {
-        solve();
+    int n, m, k;
+    if (cin >> n >> m >> k) {
+        vector<string> grid(n);
+        for (int i = 0; i < n; i++) {
+            cin >> grid[i];
+        }
+        cout << solve(n, m, k, grid) << "\n";
     }
 
     return 0;
