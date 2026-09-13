@@ -27,17 +27,28 @@ From the provided image or text:
    - `problems/<slug>/problem.md`
    - `problems/<slug>/<slug>.cpp`
 
-### 2. File Template Requirement: User Implements `void solve()`
+### 2. File Template Requirement: User Implements `solve(...)` (LeetCode-style)
 The starter code file **must be named `<problem_slug>.cpp`** and must:
 1. Include the problem description, constraints, and sample examples in comments at the top.
-2. Provide standard competitive programming fast I/O in `main()`.
-3. Provide a `void solve()` function whose body is **left empty for the user to write**:
+2. Read all input in `main()` (with fast I/O) and pass the parsed inputs into `solve(...)` with clean, typed parameters (e.g. `int n, int m, const vector<string>& grid`).
+3. Provide the `solve(...)` function with its signature and parameters pre-filled, but its body **left empty for the user to implement**:
    ```cpp
-   void solve() {
+   // LeetCode-style signature: inputs are already parsed in main()
+   auto solve(int n, int m, int k, const vector<string>& grid) {
        // Write your solution here
    }
+
+   int main() {
+       ios_base::sync_with_stdio(false);
+       cin.tie(NULL);
+
+       // Read input...
+       auto result = solve(...);
+       // Print result...
+       return 0;
+   }
    ```
-> **CRITICAL RULE**: Do **NOT** implement the solution logic in `<slug>.cpp`. The user will write their own code!
+> **CRITICAL RULE**: Do **NOT** implement the core algorithmic logic inside `solve(...)`. The user writes their own algorithm!
 
 ### 3. Generate Verified Test Cases (Python Reference Oracle)
 1. Write a correct reference solution in Python (simulation, brute force, or mathematical).
@@ -55,12 +66,13 @@ The starter code file **must be named `<problem_slug>.cpp`** and must:
 ### 5. Present to the User
 Report:
 - Clean summary of the problem and constraints.
-- Direct clickable link to [`problems/<slug>/<slug>.cpp`](file:///home/seronic/Projects/harpy/problems/<slug>/<slug>.cpp).
+- Direct clickable link to the generated starter file: [`problems/<slug>/<slug>.cpp`](file://problems/<slug>/<slug>.cpp).
 - Summary of the generated test cases (samples, edge cases).
 - The exact command the user can run when ready:
-  ```bash
-  harpy test problems/<slug>/<slug>.cpp
-  ```
+   ```bash
+   harpy test <slug>
+   ```
+   (or `harpy test problems/<slug>/<slug>.cpp`)
 
 ### 6. Testing the User's Solution
 When the user says "test my code", "run tests", or asks for help debugging:

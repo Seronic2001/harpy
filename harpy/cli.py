@@ -32,7 +32,7 @@ _harpy_completions()
         cword=$COMP_CWORD
     fi
 
-    local commands="test push completion --help --version"
+    local commands="init test push completion --help --version"
 
     if [ "$cword" -eq 1 ]; then
         COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
@@ -256,6 +256,24 @@ def cmd_completion(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_init(args: argparse.Namespace) -> int:
+    """Initialize a directory for DSA / competitive programming with Harpy."""
+    cwd = Path.cwd()
+    tabignore = cwd / ".tabignore"
+    if not tabignore.exists():
+        tabignore.write_text("*.cpp\n*.c\n*.h\n*.hpp\n", encoding="utf-8")
+
+    antigravityignore = cwd / ".antigravityignore"
+    if not antigravityignore.exists():
+        antigravityignore.write_text("*.cpp\n*.c\n*.h\n*.hpp\n", encoding="utf-8")
+
+    (cwd / "problems").mkdir(exist_ok=True)
+    console.print(f"[bold green]✔ Initialized Harpy DSA workspace in:[/bold green] {cwd}")
+    console.print("  • Created [cyan]problems/[/cyan] directory")
+    console.print("  • Configured [cyan].tabignore[/cyan] (ghost suggestions disabled for C++)")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="harpy",
@@ -266,6 +284,9 @@ def main() -> int:
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
+
+    # Init workspace
+    subparsers.add_parser("init", help="Initialize current folder for DSA practice with Harpy")
 
     # Test runner
     test_parser = subparsers.add_parser("test", help="Test a solution against test cases")
@@ -288,7 +309,9 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    if args.command == "test":
+    if args.command == "init":
+        return cmd_init(args)
+    elif args.command == "test":
         return cmd_test(args)
     elif args.command == "push":
         return cmd_push(args)
