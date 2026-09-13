@@ -42,15 +42,23 @@ _harpy_completions()
     case "${words[1]}" in
         test)
             local candidates=""
-            # Add files ending in cpp, py, java
-            candidates+="$(compgen -f -X '!*.@(cpp|cc|cxx|py|java)' -- "$cur") "
-            # Add problem names and problem files from problems/
+            # 1. Solution files in current directory
+            for f in *.cpp *.cc *.cxx *.py *.java; do
+                if [ -f "$f" ]; then
+                    candidates+="$f "
+                fi
+            done
+            # 2. Problem solution files and directories in problems/
             if [ -d "problems" ]; then
                 for d in problems/*; do
                     if [ -d "$d" ]; then
-                        local slug=$(basename "$d")
-                        candidates+="$slug "
-                        candidates+="$(ls "$d"/*.cpp "$d"/*.py 2>/dev/null) "
+                        candidates+="$d/ "
+                        for f in "$d"/*.cpp "$d"/*.cc "$d"/*.cxx "$d"/*.py "$d"/*.java; do
+                            if [ -f "$f" ]; then
+                                candidates+="$(basename "$f") "
+                                candidates+="$f "
+                            fi
+                        done
                     fi
                 done
             fi
@@ -63,7 +71,11 @@ _harpy_completions()
         push)
             local dirs=""
             if [ -d "problems" ]; then
-                dirs="$(ls -d problems/*/ 2>/dev/null)"
+                for d in problems/*; do
+                    if [ -d "$d" ]; then
+                        dirs+="$(basename "$d") $d/ "
+                    fi
+                done
             fi
             COMPREPLY=( $(compgen -W "$dirs" -- "$cur") $(compgen -d -- "$cur") )
             return 0

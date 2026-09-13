@@ -24,3 +24,12 @@ def test_cli_init_command(monkeypatch, tmp_path):
     assert (tmp_path / "problems").is_dir()
     assert (tmp_path / ".tabignore").is_file()
     assert "*.cpp" in (tmp_path / ".tabignore").read_text(encoding="utf-8")
+
+
+def test_cli_completion(capsys):
+    sys.argv = ["harpy", "completion", "bash"]
+    code = main()
+    assert code == 0
+    captured = capsys.readouterr()
+    assert "_harpy_completions()" in captured.out
+    assert "*.cpp" in captured.out
