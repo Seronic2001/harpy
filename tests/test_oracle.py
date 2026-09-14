@@ -57,3 +57,22 @@ time.sleep(5)
 """
     with pytest.raises(OracleTimeoutError):
         run_reference_solution(ref_code, "test", timeout_sec=0.5)
+
+
+def test_run_reference_solution_batch():
+    from harpy.oracle import run_reference_solution_batch
+    ref_code = """
+import sys
+x = sys.stdin.read().strip()
+if x == 'EXIT':
+    print('BYE')
+    sys.exit(0)
+print(int(x) * 10)
+"""
+    inputs = ["1\n", "2\n", "3\n", "EXIT\n"]
+    results = run_reference_solution_batch(ref_code, inputs)
+    assert len(results) == 4
+    assert results[0] == (True, "10\n")
+    assert results[1] == (True, "20\n")
+    assert results[2] == (True, "30\n")
+    assert results[3] == (True, "BYE\n")

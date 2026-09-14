@@ -11,6 +11,11 @@ from rich.panel import Panel
 from harpy import __version__
 from harpy.cph import dispatch_to_cph, write_cph_file
 from harpy.formatter import create_problem_workspace
+from harpy.generator import (
+    execute_test_generation_for_problem,
+    find_problem_path,
+    spawn_background_test_generation,
+)
 from harpy.models import ProblemSpec, TestCase, TestCaseKind
 from harpy.oracle import execute_test_generator, verify_and_generate_testcases
 from harpy.runner import execute_and_render_tests
@@ -32,7 +37,7 @@ _harpy_completions()
         cword=$COMP_CWORD
     fi
 
-    local commands="init create new test push setup-ai completion --help --version"
+    local commands="init create new test push generate-tests stress setup-ai completion --help --version"
 
     if [ "$cword" -eq 1 ]; then
         COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
@@ -352,39 +357,62 @@ def cmd_create(args: argparse.Namespace) -> int:
         console.print(f"[bold red]Error validating ProblemSpec:[/bold red] {e}")
         return 1
 
-    # 1. Collect inputs (from explicit testcases + test_generator)
-    raw_inputs = [
-        (tc.normalized_input(), tc.kind, tc.explanation)
-        for tc in spec.testcases
-    ]
+    is_async = getattr(args, "async_mode", False) or bool(spec_data.get("async", False))
+    is_sync = getattr(args, "sync_mode", False)
+    async_mode = is_async and not is_sync
 
-    if spec.test_generator:
-        try:
-            console.print("[cyan]Running Python algorithmic test generator...[/cyan]")
-            generated_inputs = execute_test_generator(spec.test_generator)
-            console.print(f"[bold green]✔ Generated {len(generated_inputs)} test cases programmatically.[/bold green]")
-            raw_inputs.extend(generated_inputs)
-        except Exception as e:
-            console.print(f"[bold red]Test generator failed:[/bold red] {e}")
-            return 1
-
-    # 2. Oracle testcase verification if reference_code is present
-    if spec.reference_code and raw_inputs:
-        try:
-            console.print("[cyan]Running Python reference oracle across test cases...[/cyan]")
-            verified_cases = verify_and_generate_testcases(
-                spec.reference_code, raw_inputs, timeout_sec=float(spec.time_limit_ms) / 1000.0 + 2.0
-            )
-            spec.testcases = verified_cases
-            console.print(f"[bold green]✔ Verified {len(verified_cases)} total test cases with reference oracle.[/bold green]")
-        except Exception as e:
-            console.print(f"[bold red]Oracle verification failed:[/bold red] {e}")
-            return 1
-    elif raw_inputs and not spec.testcases:
-        spec.testcases = [
-            TestCase(id=idx, input=inp, output="", kind=kind, explanation=expl)
-            for idx, (inp, kind, expl) in enumerate(raw_inputs, 1)
+    # 1. Collect inputs / run tests
+    if async_mode:
+        # Instant Scaffolding Mode:
+        # Only verify immediate sample cases if their output is missing
+        if spec.reference_code and spec.testcases:
+            unverified = [tc for tc in spec.testcases if not tc.output]
+            if unverified:
+                try:
+                    sample_inputs = [(tc.normalized_input(), tc.kind, tc.explanation) for tc in unverified]
+                    verified = verify_and_generate_testcases(
+                        spec.reference_code, sample_inputs, timeout_sec=3.0
+                    )
+                    # Replace unverified outputs
+                    v_map = {tc.normalized_input().strip(): tc.output for tc in verified}
+                    for tc in spec.testcases:
+                        if not tc.output and tc.normalized_input().strip() in v_map:
+                            tc.output = v_map[tc.normalized_input().strip()]
+                except Exception as e:
+                    console.print(f"[bold yellow]Warning: Quick sample verification failed: {e}[/bold yellow]")
+    else:
+        # Synchronous Mode: Full generation and verification
+        raw_inputs = [
+            (tc.normalized_input(), tc.kind, tc.explanation)
+            for tc in spec.testcases
         ]
+
+        if spec.test_generator:
+            try:
+                console.print("[cyan]Running Python algorithmic test generator...[/cyan]")
+                generated_inputs = execute_test_generator(spec.test_generator)
+                console.print(f"[bold green]✔ Generated {len(generated_inputs)} test cases programmatically.[/bold green]")
+                raw_inputs.extend(generated_inputs)
+            except Exception as e:
+                console.print(f"[bold red]Test generator failed:[/bold red] {e}")
+                return 1
+
+        if spec.reference_code and raw_inputs:
+            try:
+                console.print("[cyan]Running Python reference oracle across test cases...[/cyan]")
+                verified_cases = verify_and_generate_testcases(
+                    spec.reference_code, raw_inputs, timeout_sec=float(spec.time_limit_ms) / 1000.0 + 2.0
+                )
+                spec.testcases = verified_cases
+                console.print(f"[bold green]✔ Verified {len(verified_cases)} total test cases with reference oracle.[/bold green]")
+            except Exception as e:
+                console.print(f"[bold red]Oracle verification failed:[/bold red] {e}")
+                return 1
+        elif raw_inputs and not spec.testcases:
+            spec.testcases = [
+                TestCase(id=idx, input=inp, output="", kind=kind, explanation=expl)
+                for idx, (inp, kind, expl) in enumerate(raw_inputs, 1)
+            ]
 
     # 2. Create problem workspace
     lang = getattr(args, "lang", "cpp") or "cpp"
@@ -408,7 +436,16 @@ def cmd_create(args: argparse.Namespace) -> int:
         else:
             cph_status = "[dim]CPH listener not active (offline .cph configured)[/dim]"
 
-    # 5. Output Rich panel
+    # 5. Handle Background Test Generation if async
+    bg_info = ""
+    if async_mode and spec.test_generator:
+        try:
+            bg_pid = spawn_background_test_generation(ws["dir"])
+            bg_info = f"\n[bold magenta]⚡ Background Generator:[/bold magenta] Active (PID {bg_pid}) - synthesizing stress/edge tests"
+        except Exception as e:
+            bg_info = f"\n[bold yellow]Background generator warning:[/bold yellow] {e}"
+
+    # 6. Output Rich panel
     category_name = spec.get_category()
     slug = spec.get_slug()
     rel_sol = ws["solution"]
@@ -430,7 +467,8 @@ def cmd_create(args: argparse.Namespace) -> int:
         f"[bold]Specification:[/bold] [link=file://{ws['markdown'].resolve()}]{rel_md}[/link]\n"
         f"[bold]Starter Code:[/bold] [link=file://{ws['solution'].resolve()}]{rel_sol}[/link]\n"
         f"[bold]Test Cases:[/bold] {len(spec.testcases)} cases in {ws['tests_dir'].name}/\n"
-        f"[bold]CPH Integration:[/bold] {cph_status}\n\n"
+        f"[bold]CPH Integration:[/bold] {cph_status}"
+        f"{bg_info}\n\n"
         f"⚡ [bold green]Ready to solve![/bold green] Run: [bold cyan]harpy test {slug}[/bold cyan]"
     )
 
@@ -440,6 +478,54 @@ def cmd_create(args: argparse.Namespace) -> int:
         expand=False,
     ))
     return 0
+
+
+def cmd_generate_tests(args: argparse.Namespace) -> int:
+    """Run test generator & reference oracle to synthesize test cases for an existing problem."""
+    target = getattr(args, "problem", ".") or "."
+    prob_path = find_problem_path(target)
+    if not prob_path:
+        console.print(f"[bold red]Error: Could not locate problem directory for:[/bold red] {target}")
+        return 1
+
+    oracle_code = None
+    if getattr(args, "oracle", None):
+        p = Path(args.oracle)
+        if p.is_file():
+            oracle_code = p.read_text(encoding="utf-8")
+        else:
+            console.print(f"[bold red]Error: Oracle file not found:[/bold red] {args.oracle}")
+            return 1
+
+    gen_code = None
+    if getattr(args, "generator", None):
+        p = Path(args.generator)
+        if p.is_file():
+            gen_code = p.read_text(encoding="utf-8")
+        else:
+            console.print(f"[bold red]Error: Generator file not found:[/bold red] {args.generator}")
+            return 1
+
+    if getattr(args, "async_mode", False):
+        pid = spawn_background_test_generation(prob_path)
+        console.print(f"[bold green]✔ Spawned background test generator (PID {pid}) for:[/bold green] {prob_path.name}")
+        return 0
+
+    console.print("[cyan]Running test generator and reference oracle...[/cyan]")
+    count, msg = execute_test_generation_for_problem(
+        prob_path,
+        oracle_code=oracle_code,
+        generator_code=gen_code,
+    )
+    if count > 0:
+        console.print(f"[bold green]✔ {msg}[/bold green]")
+        return 0
+    else:
+        if "already exist" in msg:
+            console.print(f"[bold green]✔ {msg}[/bold green]")
+            return 0
+        console.print(f"[bold red]✘ {msg}[/bold red]")
+        return 1
 
 
 def cmd_completion(args: argparse.Namespace) -> int:
@@ -606,9 +692,46 @@ def main() -> int:
     create_parser.add_argument("--lang", default="cpp", help="Starter code language (cpp/py)")
     create_parser.add_argument("--base-dir", default=".", help="Base directory for problems")
     create_parser.add_argument(
+        "-b",
+        "--async",
+        dest="async_mode",
+        action="store_true",
+        help="Scaffold problem instantly (<0.2s) and synthesize tests in the background",
+    )
+    create_parser.add_argument(
+        "--sync",
+        dest="sync_mode",
+        action="store_true",
+        help="Wait synchronously for test generation and oracle verification to complete",
+    )
+    create_parser.add_argument(
         "--no-cph", action="store_true", help="Skip dispatching to CPH listener"
     )
     create_parser.add_argument("--port", type=int, help="Target CPH listener port")
+
+    # Generate tests / stress
+    gen_parser = subparsers.add_parser(
+        "generate-tests",
+        aliases=["stress"],
+        help="Synthesize test cases via algorithmic generator & reference oracle",
+    )
+    gen_parser.add_argument(
+        "problem",
+        nargs="?",
+        default=".",
+        help="Problem slug or directory path (default: current directory)",
+    )
+    gen_parser.add_argument(
+        "-b",
+        "--async",
+        dest="async_mode",
+        action="store_true",
+        help="Run generation in the background",
+    )
+    gen_parser.add_argument("--oracle", help="Path to reference python solver")
+    gen_parser.add_argument(
+        "-g", "--generator", help="Path to test generator python script"
+    )
 
     # Test runner
     test_parser = subparsers.add_parser("test", help="Test a solution against test cases")
@@ -636,6 +759,8 @@ def main() -> int:
 
     if args.command in ("create", "new"):
         return cmd_create(args)
+    elif args.command in ("generate-tests", "stress"):
+        return cmd_generate_tests(args)
     elif args.command == "init":
         return cmd_init(args)
     elif args.command == "test":
