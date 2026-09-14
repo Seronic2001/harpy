@@ -30,13 +30,39 @@
 
 ### 1. Installation
 
-Install via `pip` or `pipx`:
+#### Option A: Standalone Binary (Recommended — Zero Python setup needed)
+
+Harpy ships as a self-contained executable with no Python or virtual environment dependencies:
+
+- **Linux (x86_64)**:
+  ```bash
+  mkdir -p ~/.local/bin
+  curl -sSL https://github.com/Seronic2001/harpy/releases/latest/download/harpy-linux-x86_64 -o ~/.local/bin/harpy
+  chmod +x ~/.local/bin/harpy
+  ```
+
+- **macOS (Apple Silicon M1/M2/M3/M4)**:
+  ```bash
+  mkdir -p ~/.local/bin
+  curl -sSL https://github.com/Seronic2001/harpy/releases/latest/download/harpy-macos-arm64 -o ~/.local/bin/harpy
+  chmod +x ~/.local/bin/harpy
+  ```
+
+- **Windows**:
+  Download `harpy-windows-x86_64.exe` from the [Latest Release](https://github.com/Seronic2001/harpy/releases/latest), rename to `harpy.exe`, and add to your `PATH`.
+
+> *Tip: Ensure `~/.local/bin` is in your `PATH` (e.g., `export PATH="$HOME/.local/bin:$PATH"`).*
+
+#### Option B: Via `pip` or `pipx`
 
 ```bash
-# Recommended: install globally with pipx
-pipx install harpy-cp
+# Recommended: install globally via pipx
+pipx install git+https://github.com/Seronic2001/harpy.git
 
-# Or standard pip
+# Or via standard pip
+pip install git+https://github.com/Seronic2001/harpy.git
+
+# Or from PyPI
 pip install harpy-cp
 ```
 
