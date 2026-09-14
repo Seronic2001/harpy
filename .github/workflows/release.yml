@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   build-binaries:
@@ -87,6 +88,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install build
           python -m build
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          skip-existing: true
 
       - name: Download all binary artifacts
         uses: actions/download-artifact@v4
