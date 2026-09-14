@@ -3,7 +3,7 @@
 [![CI](https://github.com/Seronic2001/harpy/actions/workflows/ci.yml/badge.svg)](https://github.com/Seronic2001/harpy/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
-[![PyPI version](https://img.shields.io/badge/pypi-0.1.0-orange.svg)](https://pypi.org/project/harpy-cp/)
+[![PyPI version](https://img.shields.io/badge/pypi-0.1.1-orange.svg)](https://pypi.org/project/harpy-cp/)
 
 > **A CLI toolkit and Model Context Protocol (MCP) server for competitive programming.**
 > Converts problem statements into decoupled C++ templates, runs brute-force differential testing to eliminate AI test-case hallucination, and synchronizes test cases directly with CPH and local compilers.
