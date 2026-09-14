@@ -46,25 +46,33 @@ try {
         New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     }
 
-    $TmpFile = "$InstallDir\.harpy_download.tmp"
-    if (Test-Path $TmpFile) { Remove-Item $TmpFile -Force -ErrorAction SilentlyContinue }
+    # Remove existing binary to ensure clean install
+    if (Test-Path $ExePath) {
+        Remove-Item -Path $ExePath -Force -ErrorAction SilentlyContinue
+    }
 
-    # 3. Asynchronous Download with Real-Time Animated Spinner
+    # 3. Download with animated spinner
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls13 } catch {}
-    $wc = New-Object System.Net.WebClient
-    $wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) harpy-installer")
 
     $spinChars = @('⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏')
     $i = 0
 
-    $wc.DownloadFileAsync([System.Uri]$Url, $TmpFile)
+    # Start download as a background job
+    $job = Start-Job -ScriptBlock {
+        param($uri, $out)
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls13 } catch {}
+        $ProgressPreference = 'SilentlyContinue'
+        Invoke-WebRequest -Uri $uri -OutFile $out -UseBasicParsing
+    } -ArgumentList $Url, $ExePath
 
-    while ($wc.IsBusy) {
+    # Animate spinner while download runs
+    while ($job.State -eq 'Running') {
         $mbStr = ""
-        if (Test-Path $TmpFile) {
+        if (Test-Path $ExePath) {
             try {
-                $bytes = (Get-Item $TmpFile).Length
+                $bytes = (Get-Item $ExePath -ErrorAction SilentlyContinue).Length
                 if ($bytes -gt 0) {
                     $mb = [Math]::Round($bytes / 1MB, 1)
                     $mbStr = " ($mb MB)"
@@ -73,28 +81,19 @@ try {
         }
         Write-Host ("`r  " + $spinChars[$i] + " Downloading Harpy standalone binary..." + $mbStr + "   ") -NoNewline -ForegroundColor Cyan
         $i = ($i + 1) % $spinChars.Length
-        Start-Sleep -Milliseconds 70
+        Start-Sleep -Milliseconds 80
     }
 
-    # Verify download succeeded or fallback
-    if (-not (Test-Path $TmpFile) -or (Get-Item $TmpFile).Length -lt 1000000) {
-        Write-Host "`r  ▸ Retrying download with standard transport...               " -ForegroundColor Yellow
-        $ProgressPreference = 'SilentlyContinue'
-        Invoke-WebRequest -Uri $Url -OutFile $TmpFile -UseBasicParsing
+    # Check job result
+    $jobResult = Receive-Job -Job $job -ErrorAction SilentlyContinue 2>&1
+    Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+
+    # Verify download
+    if (-not (Test-Path $ExePath) -or (Get-Item $ExePath).Length -lt 1000000) {
+        throw "Download failed. File missing or too small."
     }
 
-    $finalSize = [Math]::Round((Get-Item $TmpFile).Length / 1MB, 1)
-    # Remove existing binary first to avoid "file already exists" errors
-    if (Test-Path $ExePath) {
-        Remove-Item -Path $ExePath -Force -ErrorAction SilentlyContinue
-    }
-    try {
-        Move-Item -Path $TmpFile -Destination $ExePath -Force
-    } catch {
-        # Fallback: copy then delete if move fails (e.g. cross-drive or locked)
-        Copy-Item -Path $TmpFile -Destination $ExePath -Force
-        Remove-Item -Path $TmpFile -Force -ErrorAction SilentlyContinue
-    }
+    $finalSize = [Math]::Round((Get-Item $ExePath).Length / 1MB, 1)
     Write-Host "`r  ✔ Downloaded Harpy standalone binary ($finalSize MB)            " -ForegroundColor Green
 
     # 4. Verify Execution
