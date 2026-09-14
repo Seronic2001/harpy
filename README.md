@@ -58,12 +58,14 @@ Harpy ships as a self-contained executable with no Python or virtual environment
 #### Option B: Via `pip` or `pipx`
 
 ```bash
-# Recommended: install globally via pipx
+# Recommended: install globally via pipx (auto-configures PATH)
 pipx install harpy-cp
 
 # Or via standard pip
 pip install harpy-cp
 ```
+
+> **Windows Tip**: If `harpy` is not found after `pip install`, ensure your user Scripts directory (e.g. `%APPDATA%\Python\Python312\Scripts`) is added to your `PATH`, or use `pipx` which handles this automatically.
 
 To update to the latest version:
 ```bash

@@ -33,3 +33,24 @@ def test_cli_completion(capsys):
     captured = capsys.readouterr()
     assert "_harpy_completions()" in captured.out
     assert "*.cpp" in captured.out
+
+
+def test_cli_setup_ai(monkeypatch, tmp_path):
+    import json
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    sys.argv = ["harpy", "setup-ai"]
+    code = main()
+    assert code == 0
+
+    # Verify skill installed
+    skill_file = tmp_path / ".gemini" / "config" / "skills" / "harpy-cp" / "SKILL.md"
+    assert skill_file.is_file()
+
+    # Verify mcp_config.json created with mcpServers.harpy
+    mcp_config_file = tmp_path / ".gemini" / "config" / "mcp_config.json"
+    assert mcp_config_file.is_file()
+    data = json.loads(mcp_config_file.read_text(encoding="utf-8"))
+    assert "mcpServers" in data
+    assert "harpy" in data["mcpServers"]
+    assert "command" in data["mcpServers"]["harpy"]
+    assert "args" in data["mcpServers"]["harpy"]

@@ -37,7 +37,7 @@ _harpy_completions()
         cword=$COMP_CWORD
     fi
 
-    local commands="init create new test push generate-tests stress setup-ai completion --help --version"
+    local commands="init create new test push generate-tests stress setup-ai completion mcp --help --version"
 
     if [ "$cword" -eq 1 ]; then
         COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
@@ -621,16 +621,26 @@ def cmd_setup_ai(args: argparse.Namespace) -> int:
         except Exception:
             mcp_config = {}
 
+    mcp_servers = mcp_config.setdefault("mcpServers", {})
+
     import shutil
-    python_exe = (
-        shutil.which("python3")
-        or shutil.which("python")
-        if getattr(sys, "frozen", False)
-        else sys.executable
-    )
+    harpy_exe = shutil.which("harpy")
+    if harpy_exe and not harpy_exe.endswith("python"):
+        server_cmd = harpy_exe
+        server_args = ["mcp"]
+    else:
+        python_exe = (
+            shutil.which("python3")
+            or shutil.which("python")
+            if getattr(sys, "frozen", False)
+            else sys.executable
+        )
+        server_cmd = python_exe
+        server_args = ["-m", "harpy.mcp_server"]
+
     mcp_servers["harpy"] = {
-        "command": python_exe,
-        "args": ["-m", "harpy.mcp_server"],
+        "command": server_cmd,
+        "args": server_args,
     }
     mcp_config_path.parent.mkdir(parents=True, exist_ok=True)
     mcp_config_path.write_text(json.dumps(mcp_config, indent=2), encoding="utf-8")
@@ -640,8 +650,8 @@ def cmd_setup_ai(args: argparse.Namespace) -> int:
     cursor_snippet = json.dumps({
         "mcpServers": {
             "harpy": {
-                "command": "python3",
-                "args": ["-m", "harpy.mcp_server"]
+                "command": server_cmd,
+                "args": server_args,
             }
         }
     }, indent=2)
@@ -775,6 +785,9 @@ def main() -> int:
     # Setup AI & MCP
     subparsers.add_parser("setup-ai", help="Configure Harpy AI skill and MCP server for Antigravity, Cursor, and Claude")
 
+    # Run MCP stdio server directly
+    subparsers.add_parser("mcp", help="Run Harpy MCP stdio server")
+
     args = parser.parse_args()
 
     if args.command in ("create", "new"):
@@ -791,6 +804,14 @@ def main() -> int:
         return cmd_completion(args)
     elif args.command == "setup-ai":
         return cmd_setup_ai(args)
+    elif args.command == "mcp":
+        try:
+            from harpy.mcp_server import main as mcp_main
+        except ImportError:
+            console.print("[bold red]Error:[/bold red] The 'mcp' Python package is required. Install with: pip install 'harpy-cp[mcp]'")
+            return 1
+        mcp_main()
+        return 0
     else:
         parser.print_help()
         return 0

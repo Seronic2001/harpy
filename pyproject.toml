@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "harpy-cp"
-version = "0.1.1"
+version = "0.1.2"
 description = "AI-assisted competitive programming & interview prep toolkit: LeetCode-style problem formulation, verified test case generation, CPH integration, and local runner."
 authors = [{ name = "Harpy Developers" }]
 license = "MIT"
@@ -26,6 +26,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "rich>=13.0.0",
     "requests>=2.28.0",
+    "mcp>=1.0.0",
 ]
 
 [project.optional-dependencies]
