@@ -9,7 +9,7 @@ function Print-Banner {
     Write-Host " / __  / /_/ / /  / /_/ / /_/ /       " -ForegroundColor Cyan
     Write-Host "/_/ /_/\__,_/_/  / .___/\__, /        " -ForegroundColor Cyan
     Write-Host "                /_/    /____/         " -ForegroundColor DarkCyan
-    Write-Host "  Harpy Uninstaller" -ForegroundColor DarkGray
+    Write-Host "  Harpy Uninstaller (Windows)" -ForegroundColor DarkGray
     Write-Host "  ────────────────────────────────────────────────────────" -ForegroundColor DarkGray
     Write-Host ""
 }
@@ -21,32 +21,63 @@ try {
     $GeminiSkill = "$env:USERPROFILE\.gemini\config\skills\harpy-cp"
     $GeminiMcp = "$env:USERPROFILE\.gemini\config\mcp_config.json"
 
-    # 1. Remove Executable Directory
-    if (Test-Path $InstallDir) {
-        Remove-Item -Path $InstallDir -Recurse -Force -ErrorAction SilentlyContinue
-        Write-Host "  ✔ Removed installation folder: " -NoNewline -ForegroundColor Green
-        Write-Host "$InstallDir" -ForegroundColor White
-    } else {
-        Write-Host "  • Installation folder not found (skipped)" -ForegroundColor DarkGray
+    # 1. Uninstall pip/pipx packages if present
+    Write-Host "  ▸ Checking pip / pipx installations..." -ForegroundColor DarkGray
+    $pipCmd = Get-Command "pip" -ErrorAction SilentlyContinue
+    if ($pipCmd) {
+        pip uninstall -y harpy-cp 2>$null | Out-Null
+        Write-Host "  ✔ Uninstalled harpy-cp from pip" -ForegroundColor Green
+    }
+    $pipxCmd = Get-Command "pipx" -ErrorAction SilentlyContinue
+    if ($pipxCmd) {
+        pipx uninstall harpy-cp 2>$null | Out-Null
     }
 
-    # 2. Clean User PATH
+    # 2. Remove Standalone Executable Directory
+    if (Test-Path $InstallDir) {
+        Remove-Item -Path $InstallDir -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Host "  ✔ Removed binary folder: " -NoNewline -ForegroundColor Green
+        Write-Host "$InstallDir" -ForegroundColor White
+    }
+
+    # 3. Clean User PATH in Environment Registry
     $UserPath = [Environment]::GetEnvironmentVariable("PATH", [EnvironmentVariableTarget]::User)
     if ($UserPath -like "*$InstallDir*") {
         $Paths = $UserPath -split ';' | Where-Object { $_ -ne $InstallDir -and $_ -ne "" }
         $NewPath = $Paths -join ';'
         [Environment]::SetEnvironmentVariable("PATH", $NewPath, [EnvironmentVariableTarget]::User)
-        Write-Host "  ✔ Removed Harpy from User PATH" -ForegroundColor Green
+        Write-Host "  ✔ Removed Harpy from Windows User PATH" -ForegroundColor Green
     }
 
-    # 3. Remove Antigravity Skill
+    # 4. Clean PowerShell Profile ($PROFILE) if modified
+    if ($PROFILE -and (Test-Path $PROFILE)) {
+        $ProfileContent = Get-Content $PROFILE -Raw
+        if ($ProfileContent -match "harpy") {
+            $Cleaned = ($ProfileContent -split "`n" | Where-Object { $_ -notmatch "harpy" }) -join "`n"
+            Set-Content $PROFILE -Value $Cleaned -Encoding UTF8
+            Write-Host "  ✔ Cleaned Harpy references from PowerShell profile ($PROFILE)" -ForegroundColor Green
+        }
+    }
+
+    # 5. Clean Git Bash ~/.bashrc if present
+    $Bashrc = "$env:USERPROFILE\.bashrc"
+    if (Test-Path $Bashrc) {
+        $BashrcContent = Get-Content $Bashrc -Raw
+        if ($BashrcContent -match "harpy") {
+            $CleanedBash = ($BashrcContent -split "`n" | Where-Object { $_ -notmatch "harpy" }) -join "`n"
+            Set-Content $Bashrc -Value $CleanedBash -Encoding UTF8
+            Write-Host "  ✔ Cleaned Harpy references from Git Bash ~/.bashrc" -ForegroundColor Green
+        }
+    }
+
+    # 6. Remove Antigravity AI Skill
     if (Test-Path $GeminiSkill) {
         Remove-Item -Path $GeminiSkill -Recurse -Force -ErrorAction SilentlyContinue
         Write-Host "  ✔ Removed AI skill: " -NoNewline -ForegroundColor Green
         Write-Host "$GeminiSkill" -ForegroundColor White
     }
 
-    # 4. Clean MCP Server Config
+    # 7. Clean MCP Server Config
     if (Test-Path $GeminiMcp) {
         try {
             $JsonContent = Get-Content $GeminiMcp -Raw | ConvertFrom-Json
@@ -58,7 +89,7 @@ try {
         } catch {}
     }
 
-    # 5. Success Card
+    # 8. Success Card
     Write-Host ""
     Write-Host "  ╭──────────────────────────────────────────────────────────────╮" -ForegroundColor Cyan
     Write-Host "  │  " -NoNewline -ForegroundColor Cyan
@@ -68,7 +99,7 @@ try {
     Write-Host "  │  All binaries, environment variables, skills, and MCP        │" -ForegroundColor Cyan
     Write-Host "  │  configurations have been cleaned from your machine.         │" -ForegroundColor Cyan
     Write-Host "  │                                                              │" -ForegroundColor Cyan
-    Write-Host "  │  To reinstall anytime, run:                                  │" -ForegroundColor Cyan
+    Write-Host "  │  To reinstall anytime:                                       │" -ForegroundColor Cyan
     Write-Host "  │  " -NoNewline -ForegroundColor Cyan
     Write-Host "irm https://raw.githubusercontent.com/.../install.ps1 | iex " -NoNewline -ForegroundColor Green
     Write-Host "│" -ForegroundColor Cyan
