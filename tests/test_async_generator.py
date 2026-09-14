@@ -163,3 +163,43 @@ def test_cli_generate_tests_command(tmp_path: Path, monkeypatch, capsys):
     assert (tests_dir / "in_02.txt").read_text().strip() == "9"
     assert (tests_dir / "out_02.txt").read_text().strip() == "18"
 
+
+def test_cli_generate_tests_piped_stdin(tmp_path: Path, monkeypatch, capsys):
+    import io
+    monkeypatch.chdir(tmp_path)
+    prob_dir = tmp_path / "problems" / "introductory-problems" / "pipe-test"
+    prob_dir.mkdir(parents=True)
+    tests_dir = prob_dir / "tests"
+    tests_dir.mkdir()
+
+    (tests_dir / "in_01.txt").write_text("3\n")
+    (tests_dir / "out_01.txt").write_text("30\n")
+
+    spec = {
+        "title": "Pipe Test",
+        "slug": "pipe-test",
+        "category": "introductory-problems",
+        "testcases": [
+            {"id": 1, "input": "3\n", "output": "30\n", "kind": "sample"}
+        ]
+    }
+    (prob_dir / "problem.json").write_text(json.dumps(spec, indent=2))
+    (prob_dir / "pipe-test.cpp").write_text("// C++ code")
+
+    pipe_data = json.dumps({
+        "reference_code": "import sys\nprint(int(sys.stdin.read().strip()) * 10)",
+        "test_generator": "def generate():\n    yield ('4\\n', 'sample')\n",
+    })
+
+    import sys
+    monkeypatch.setattr(sys, "stdin", io.StringIO(pipe_data))
+    sys.argv = ["harpy", "generate-tests", "pipe-test"]
+    code = main()
+    assert code == 0
+
+    captured = capsys.readouterr()
+    assert "Successfully generated and verified 1 test cases" in captured.out
+    assert (tests_dir / "in_02.txt").read_text().strip() == "4"
+    assert (tests_dir / "out_02.txt").read_text().strip() == "40"
+
+

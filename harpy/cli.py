@@ -489,6 +489,18 @@ def cmd_generate_tests(args: argparse.Namespace) -> int:
         return 1
 
     oracle_code = None
+    gen_code = None
+
+    if not sys.stdin.isatty():
+        try:
+            raw = sys.stdin.read()
+            if raw.strip():
+                data = json.loads(raw)
+                oracle_code = data.get("reference_code")
+                gen_code = data.get("test_generator")
+        except Exception:
+            pass
+
     if getattr(args, "oracle", None):
         p = Path(args.oracle)
         if p.is_file():
@@ -497,7 +509,6 @@ def cmd_generate_tests(args: argparse.Namespace) -> int:
             console.print(f"[bold red]Error: Oracle file not found:[/bold red] {args.oracle}")
             return 1
 
-    gen_code = None
     if getattr(args, "generator", None):
         p = Path(args.generator)
         if p.is_file():

@@ -63,6 +63,11 @@ def execute_test_generation_for_problem(
     ref_code = oracle_code or spec.reference_code
     gen_code = generator_code or spec.test_generator
 
+    if oracle_code:
+        spec.reference_code = oracle_code
+    if generator_code:
+        spec.test_generator = generator_code
+
     if not gen_code:
         return 0, "No test_generator specified in problem.json or arguments"
     if not ref_code:
