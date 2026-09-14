@@ -59,7 +59,6 @@ jobs:
             --name "${{ matrix.asset_name }}" \
             --paths . \
             --clean \
-            --strip \
             --exclude-module tkinter \
             --exclude-module sqlite3 \
             --exclude-module multiprocessing \
