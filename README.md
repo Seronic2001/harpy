@@ -70,6 +70,25 @@ harpy setup-ai
 harpy completion install
 ```
 
+### 3. Uninstallation
+
+If you ever need to remove Harpy:
+
+- **Linux & macOS**:
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/Seronic2001/harpy/master/uninstall.sh | bash
+  ```
+
+- **Windows (PowerShell)**:
+  ```powershell
+  irm https://raw.githubusercontent.com/Seronic2001/harpy/master/uninstall.ps1 | iex
+  ```
+
+- **Via pip**:
+  ```bash
+  pip uninstall harpy-cp
+  ```
+
 ---
 
 ## 💻 CLI Usage
