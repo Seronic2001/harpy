@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 from harpy.models import ProblemSpec, TestCaseKind
 
 
@@ -100,17 +100,87 @@ int main() {
 
 def generate_python_starter(spec: ProblemSpec) -> str:
     """Generate competitive programming Python starter template."""
-    return f'''"""
+    constraints_list = (
+        "\n   ".join(f"- {c}" for c in spec.constraints)
+        if spec.constraints
+        else "None"
+    )
+
+    examples = []
+    for i, tc in enumerate(spec.testcases[:3], start=1):
+        clean_in = tc.normalized_input().replace("\n", "\n      ")
+        clean_out = tc.normalized_output().replace("\n", "\n      ")
+        examples.append(
+            f"Example {i}:\n      Input:\n      {clean_in}Output:\n      {clean_out}"
+        )
+    examples_comment = "\n\n   ".join(examples) if examples else "None"
+
+    header = f'''"""
 Problem: {spec.title}
+Category: {spec.get_category()}
 Difficulty: {spec.difficulty}
 Time Limit: {spec.time_limit_ms} ms | Memory Limit: {spec.memory_limit_mb} MB
+
+Constraints:
+   {constraints_list}
+
+Examples:
+   {examples_comment}
 """
 
 import sys
 
-def solve():
+'''
+
+    if spec.py_signature and spec.py_main_parser:
+        # Determine default return statement based on signature return type
+        ret_statement = ""
+        if "->" in spec.py_signature:
+            ret_part = spec.py_signature.split("->")[-1].strip().rstrip(":")
+            if ret_part in ("int", "float"):
+                ret_statement = "    return 0\n"
+            elif ret_part == "bool":
+                ret_statement = "    return False\n"
+            elif ret_part == "str":
+                ret_statement = '    return ""\n'
+            elif any(ret_part.startswith(t) for t in ("list", "List", "set", "dict", "tuple")):
+                ret_statement = "    return []\n"
+        if not ret_statement:
+            ret_statement = "    pass\n"
+
+        sig = spec.py_signature.strip().rstrip(":")
+        if not sig.startswith("def "):
+            sig = f"def {sig}"
+        sig = f"{sig}:"
+
+        parser_lines = [
+            f"    {line}" if line.strip() else ""
+            for line in spec.py_main_parser.rstrip().split("\n")
+        ]
+        parser_indented = "\n".join(parser_lines)
+
+        code_body = f"""{sig}
+    # Write your solution here
+{ret_statement}
+
+def main():
+{parser_indented}
+
+
+if __name__ == "__main__":
+    main()
+"""
+        return header + code_body
+
+    if "py" in spec.starter_templates:
+        return header + spec.starter_templates["py"]
+    if "python" in spec.starter_templates:
+        return header + spec.starter_templates["python"]
+
+    return header + '''def solve():
     # Write your solution here
     pass
+
 
 if __name__ == "__main__":
     solve()

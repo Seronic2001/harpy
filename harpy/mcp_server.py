@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from mcp.server.mcpserver import MCPServer
 from harpy.cph import dispatch_to_cph, write_cph_file
 from harpy.formatter import create_problem_workspace
@@ -30,6 +30,8 @@ def harpy_setup_problem(
     base_dir: str = ".",
     cpp_signature: Optional[str] = None,
     cpp_main_parser: Optional[str] = None,
+    py_signature: Optional[str] = None,
+    py_main_parser: Optional[str] = None,
     test_generator: Optional[str] = None,
 ) -> str:
     """
@@ -49,6 +51,8 @@ def harpy_setup_problem(
         memory_limit_mb=memory_limit_mb,
         cpp_signature=cpp_signature,
         cpp_main_parser=cpp_main_parser,
+        py_signature=py_signature,
+        py_main_parser=py_main_parser,
         test_generator=test_generator,
     )
 

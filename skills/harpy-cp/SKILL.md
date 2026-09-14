@@ -21,8 +21,10 @@ Follow this procedure whenever the user:
 
 2. ⛔ **NO PRE-FLIGHT EXPLORATION OR SCRATCH PRE-TESTING**:
    - Do **NOT** run exploratory commands like `which harpy`, `find`, `ls`, `harpy --help`, or `harpy init`.
+   - Do **NOT** run `list_dir` on workspace or `problems/`.
+   - Do **NOT** run `view_file` on active documents from metadata or MCP schema files.
    - Do **NOT** write temporary scripts in `scratch/` to manually test the Python oracle first.
-   - `harpy create` automatically runs and verifies the oracle across all test cases internally and displays any execution traceback if it fails.
+   - Execute `harpy create` in your **VERY FIRST TURN**.
 
 3. ⛔ **NO REDUNDANT C++ REFERENCE SOLVERS**:
    - Do **NOT** write, compile, or run a C++ reference solver.
@@ -30,12 +32,14 @@ Follow this procedure whenever the user:
 
 4. ⛔ **USER IMPLEMENTS `solve(...)` (LeetCode-style)**:
    - For C++ (`<problem_slug>.cpp`), fast I/O is handled in `main()` which passes typed arguments to `solve(...)`.
-   - For Python (`<problem_slug>.py`), input reading and fast I/O are handled in `__main__` which calls `solve()`.
+   - For Python (`<problem_slug>.py`), input reading and fast I/O are handled in `main()` which passes typed arguments to `solve(...)` and prints the result.
+   - Supply `cpp_signature` + `cpp_main_parser` for C++, OR `py_signature` + `py_main_parser` for Python.
    - **NEVER implement the algorithmic logic inside `solve(...)`**. The user writes their own algorithm.
 
-5. 💡 **LANGUAGE SELECTION (C++ vs Python)**:
-   - Default to C++ (`cpp`).
-   - If the user explicitly asks for Python, or if the system lacks a C++ compiler (`g++` / `clang++`), pass `--lang py` to `harpy create`.
+5. 💡 **LANGUAGE SELECTION & ZERO-TURN COMPILER HANDLING**:
+   - If the user explicitly asks for Python, or if you are on Windows without a pre-installed `g++`/`clang++`, use `--lang py` with `py_signature` and `py_main_parser`.
+   - Otherwise default to C++ (`cpp`) with `cpp_signature` and `cpp_main_parser`.
+   - Do NOT run exploratory commands to check compilers. Make the language decision immediately.
 
 6. ⛔ **DO NOT VIEW GENERATED FILES AFTER `harpy create`**:
    - Do **NOT** open or `cat` the generated `.cpp`, `.py`, `problem.md`, or test files after scaffolding.
@@ -50,11 +54,10 @@ Do not create intermediate scratch files. Execute problem setup in **a single te
 
 > [!IMPORTANT]
 > **Detect the shell FIRST.** Bash heredocs (`<< 'EOF'`) do NOT work in PowerShell.
-> - **Linux / macOS / Git Bash / WSL**: Use `<< 'EOF'` heredoc (shown below).
-> - **Windows PowerShell / pwsh**: Use the PowerShell `@'...'@` here-string (shown below).
-> - If unsure, check `$env:OS` or `uname` before running the command.
+> - **Linux / macOS / Git Bash / WSL**: Use `<< 'EOF'` heredoc.
+> - **Windows PowerShell / pwsh**: Use the PowerShell `@'...'@` here-string.
 
-### Linux / macOS / Git Bash (heredoc):
+### C++ Problem Setup:
 ```bash
 harpy create --async - << 'EOF'
 {
@@ -75,9 +78,9 @@ harpy create --async - << 'EOF'
 EOF
 ```
 
-### Windows PowerShell / pwsh (here-string):
-```powershell
-@'
+### Python Problem Setup (with LeetCode I/O Support):
+```bash
+harpy create --lang py --async - << 'EOF'
 {
   "title": "Lexicographically Minimal Walk",
   "category": "graph-algorithms",
@@ -87,16 +90,15 @@ EOF
   "input_format": "The first line contains N and M...",
   "output_format": "Print the string formed by the walk...",
   "constraints": ["$1 \\le N, M \\le 10^5$"],
-  "cpp_signature": "string solve(int n, int m, int k, const vector<vector<pair<int, char>>>& adj)",
-  "cpp_main_parser": "int n, m, k;\ncin >> n >> m >> k;\nvector<vector<pair<int, char>>> adj(n + 1);\nfor (int i = 0; i < m; ++i) {\n    int u, v; char c;\n    cin >> u >> v >> c;\n    adj[u].push_back({v, c});\n}\ncout << solve(n, m, k, adj) << \"\\n\";",
+  "py_signature": "def solve(n: int, m: int, k: int, adj: list[list[tuple[int, str]]]) -> str",
+  "py_main_parser": "import sys\ninput_data = sys.stdin.read().split()\nif not input_data: return\nn, m, k = map(int, input_data[:3])\n...\nprint(solve(n, m, k, adj))",
   "testcases": [{"input": "4 4 2\n1 2 a\n2 4 b\n1 3 a\n3 4 a\n", "kind": "sample"}],
   "reference_code": "import sys\ndef solve():\n    ...\nsolve()\n",
   "test_generator": "def generate():\n    yield ('1 0 1\\n', 'edge')\n"
 }
-'@ | harpy create --async -
+EOF
 ```
-
-For Python solutions, add `--lang py` and omit `cpp_signature` / `cpp_main_parser`.
+*(On Windows PowerShell, replace `<< 'EOF' ... EOF` with `@' ... '@ | harpy create ... -`)*
 
 > [!TIP]
 > **Sub-Second Scaffolding with `--async`**:

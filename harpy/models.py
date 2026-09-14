@@ -98,6 +98,8 @@ class ProblemSpec(BaseModel):
     test_generator: Optional[str] = None
     cpp_signature: Optional[str] = None
     cpp_main_parser: Optional[str] = None
+    py_signature: Optional[str] = None
+    py_main_parser: Optional[str] = None
     starter_templates: Dict[str, str] = Field(default_factory=dict)
 
     def get_slug(self) -> str:
