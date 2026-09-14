@@ -1,9 +1,10 @@
 # Harpy 🦅
 
 [![CI](https://github.com/Seronic2001/harpy/actions/workflows/ci.yml/badge.svg)](https://github.com/Seronic2001/harpy/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/harpy-cp.svg)](https://pypi.org/project/harpy-cp/)
+[![PyPI Downloads](https://img.shields.io/pypi/dm/harpy-cp.svg)](https://pypi.org/project/harpy-cp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
-[![PyPI version](https://img.shields.io/badge/pypi-0.1.1-orange.svg)](https://pypi.org/project/harpy-cp/)
 
 > **A CLI toolkit and Model Context Protocol (MCP) server for competitive programming.**
 > Converts problem statements into decoupled C++ templates, runs brute-force differential testing to eliminate AI test-case hallucination, and synchronizes test cases directly with CPH and local compilers.
@@ -13,7 +14,8 @@
 ## ✨ Features
 
 - 📑 **Decoupled Code Templates**: Converts problem descriptions into clean, typed `solve(...)` function templates with fast I/O in `main()`, separating I/O parsing from core algorithmic logic.
-- 🎯 **Brute-Force Differential Testing**: Eliminates AI test-case hallucination. Runs a simple brute-force Python script locally across edge cases, boundary conditions ($N=0, 1$, negative numbers), and randomized stress tests to generate 100% verified expected outputs.
+- ⚡ **Instant Scaffolding & Background Test Synthesis**: Scaffolds starter code, problem specifications, and CPH files in `<200ms`, while synthesizing and verifying edge/stress test cases in the background via detached processes (`--async`).
+- 🎯 **Brute-Force Differential Testing & Batch Oracle**: Eliminates AI test-case hallucination. Runs a simple brute-force Python script locally across edge cases, boundary conditions ($N=0, 1$, negative numbers), and randomized stress tests to generate 100% verified expected outputs in a single batched process.
 - ⚡ **Competitive Programming Helper (CPH) Sync**:
   - Live HTTP dispatch to VS Code / Antigravity CPH extension on port `27121`.
   - Generates native `.cph/` `.prob` files directly for offline use.
@@ -63,22 +65,16 @@ pipx install harpy-cp
 pip install harpy-cp
 ```
 
-Or install the latest commit directly from GitHub:
+To update to the latest version:
 ```bash
-pipx install git+https://github.com/Seronic2001/harpy.git
+pipx upgrade harpy-cp
+# Or with pip:
+pip install --upgrade harpy-cp
 ```
 
-To update to the latest version later:
+Or install the latest development commit directly from GitHub:
 ```bash
 pipx install --force git+https://github.com/Seronic2001/harpy.git
-# Or: pip install --upgrade git+https://github.com/Seronic2001/harpy.git
-```
-
-Or install from source:
-```bash
-git clone https://github.com/Seronic2001/harpy.git
-cd harpy
-pip install -e .
 ```
 
 ### 2. Configure AI & Shell Completion (1-Command Setup)
@@ -108,14 +104,26 @@ harpy init
 ### Create & Scaffold Problems (1-Command Setup)
 Create a categorized problem workspace, run reference oracle test verification, and sync to CPH in a single command:
 ```bash
-# From a JSON specification file
-harpy create -s spec.json
+# Instant scaffolding (<0.2s) with detached background test synthesis
+harpy create -s spec.json --async
+
+# Or wait synchronously for test generation and verification
+harpy create -s spec.json --sync
 
 # Or pipe specification directly via stdin
-cat spec.json | harpy create -
+cat spec.json | harpy create - --async
 
-# Or quick flag-based setup
+# Quick flag-based setup
 harpy create --title "Two Sum" --category "sorting-and-searching" --difficulty "Easy"
+```
+
+### Synthesize Additional Tests / Stress Test
+```bash
+# Run algorithmic test generator and verify with reference oracle
+harpy generate-tests problems/two-sum
+
+# Or run in the background with alias
+harpy stress problems/two-sum -b
 ```
 
 ### Test Solutions Locally
