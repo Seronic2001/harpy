@@ -440,7 +440,7 @@ def cmd_create(args: argparse.Namespace) -> int:
     bg_info = ""
     if async_mode and spec.test_generator:
         try:
-            bg_pid = spawn_background_test_generation(ws["dir"])
+            bg_pid = spawn_background_test_generation(ws["dir"], debug=getattr(args, "debug", False))
             bg_info = f"\n[bold magenta]⚡ Background Generator:[/bold magenta] Active (PID {bg_pid}) - synthesizing stress/edge tests"
         except Exception as e:
             bg_info = f"\n[bold yellow]Background generator warning:[/bold yellow] {e}"
@@ -518,7 +518,7 @@ def cmd_generate_tests(args: argparse.Namespace) -> int:
             return 1
 
     if getattr(args, "async_mode", False):
-        pid = spawn_background_test_generation(prob_path)
+        pid = spawn_background_test_generation(prob_path, debug=getattr(args, "debug", False))
         console.print(f"[bold green]✔ Spawned background test generator (PID {pid}) for:[/bold green] {prob_path.name}")
         return 0
 
@@ -664,6 +664,9 @@ def main() -> int:
     parser.add_argument(
         "--version", action="version", version=f"%(prog)s {__version__}"
     )
+    parser.add_argument(
+        "--debug", action="store_true", help="Enable verbose debug logging (creates .generator.log)"
+    )
 
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
@@ -716,6 +719,9 @@ def main() -> int:
         help="Wait synchronously for test generation and oracle verification to complete",
     )
     create_parser.add_argument(
+        "--debug", action="store_true", help="Enable verbose debug logging"
+    )
+    create_parser.add_argument(
         "--no-cph", action="store_true", help="Skip dispatching to CPH listener"
     )
     create_parser.add_argument("--port", type=int, help="Target CPH listener port")
@@ -738,6 +744,9 @@ def main() -> int:
         dest="async_mode",
         action="store_true",
         help="Run generation in the background",
+    )
+    gen_parser.add_argument(
+        "--debug", action="store_true", help="Enable verbose debug logging"
     )
     gen_parser.add_argument("--oracle", help="Path to reference python solver")
     gen_parser.add_argument(

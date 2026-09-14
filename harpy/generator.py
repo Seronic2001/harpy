@@ -152,16 +152,22 @@ def execute_test_generation_for_problem(
     return len(appended_cases), f"Successfully generated and verified {len(appended_cases)} test cases in {prob_dir}"
 
 
-def spawn_background_test_generation(problem_dir: Path | str) -> int:
+def spawn_background_test_generation(problem_dir: Path | str, debug: bool = False) -> int:
     """
     Spawns a detached background process to generate and verify test cases.
+    Writes .generator.log only if debug=True or HARPY_DEBUG environment variable is set.
     Returns the process PID.
     """
     p_dir = Path(problem_dir).resolve()
-    log_file = p_dir / ".generator.log"
-    log_fp = open(log_file, "a", encoding="utf-8")
-    log_fp.write(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] Spawning background test generator for {p_dir.name}...\n")
-    log_fp.flush()
+    is_debug = debug or os.environ.get("HARPY_DEBUG", "0").lower() in ("1", "true", "yes")
+
+    if is_debug:
+        log_file = p_dir / ".generator.log"
+        out_fp = open(log_file, "a", encoding="utf-8")
+        out_fp.write(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] Spawning background test generator for {p_dir.name}...\n")
+        out_fp.flush()
+    else:
+        out_fp = subprocess.DEVNULL
 
     if getattr(sys, "frozen", False):
         cmd = [sys.executable, "generate-tests", str(p_dir)]
@@ -182,8 +188,8 @@ def spawn_background_test_generation(problem_dir: Path | str) -> int:
 
     proc = subprocess.Popen(
         cmd,
-        stdout=log_fp,
-        stderr=subprocess.STDOUT,
+        stdout=out_fp,
+        stderr=subprocess.STDOUT if is_debug else subprocess.DEVNULL,
         start_new_session=True,
         env=child_env,
     )
