@@ -588,6 +588,16 @@ def cmd_completion(args: argparse.Namespace) -> int:
         return 1
 
 
+HARPY_FAST_RULE = """# Harpy Fast Execution Rule
+
+When the user asks to solve, set up, or prepare a problem with Harpy:
+1. ⛔ **NEVER run exploratory commands** (no `list_dir`, `find`, `ls`, or `view_file` on open documents in metadata).
+2. ⚡ **Execute `harpy create` in your VERY FIRST tool call**.
+3. 💡 **Language selection**: If the user asks for Python (`py`), or if on Windows without a C++ compiler in PATH, default to Python (`--lang py`). Otherwise default to C++ (`--lang cpp`).
+4. ⛔ **DO NOT view generated files** (`.cpp`, `.py`, `problem.md`) after `harpy create` finishes.
+"""
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     """Initialize a directory for DSA / competitive programming with Harpy."""
     cwd = Path.cwd()
@@ -599,10 +609,17 @@ def cmd_init(args: argparse.Namespace) -> int:
     if not antigravityignore.exists():
         antigravityignore.write_text("*.cpp\n*.c\n*.h\n*.hpp\n", encoding="utf-8")
 
+    # Configure Harpy Fast Execution Rule for AI agents
+    rules_dir = cwd / ".agents" / "rules"
+    rules_dir.mkdir(parents=True, exist_ok=True)
+    harpy_rule = rules_dir / "harpy.md"
+    harpy_rule.write_text(HARPY_FAST_RULE, encoding="utf-8")
+
     (cwd / "problems").mkdir(exist_ok=True)
     console.print(f"[bold green]✔ Initialized Harpy DSA workspace in:[/bold green] {cwd}")
     console.print("  • Created [cyan]problems/[/cyan] directory")
     console.print("  • Configured [cyan].tabignore[/cyan] (ghost suggestions disabled for C++)")
+    console.print("  • Configured [cyan].agents/rules/harpy.md[/cyan] (AI fast execution rule enabled)")
     return 0
 
 
@@ -776,6 +793,12 @@ def cmd_setup_ai(args: argparse.Namespace) -> int:
     gemini_skills_dir.mkdir(parents=True, exist_ok=True)
     (gemini_skills_dir / "SKILL.md").write_text(skill_content, encoding="utf-8")
     console.print(f"[bold green]✔ Installed Antigravity skill to:[/bold green] {gemini_skills_dir / 'SKILL.md'}")
+
+    # 2b. Install global Harpy Fast Execution Rule
+    gemini_rules_dir = home / ".gemini" / "config" / "rules"
+    gemini_rules_dir.mkdir(parents=True, exist_ok=True)
+    (gemini_rules_dir / "harpy.md").write_text(HARPY_FAST_RULE, encoding="utf-8")
+    console.print(f"[bold green]✔ Installed AI fast execution rule to:[/bold green] {gemini_rules_dir / 'harpy.md'}")
 
     # 3. Configure or update ~/.gemini/config/mcp_config.json
     mcp_config_path = home / ".gemini" / "config" / "mcp_config.json"

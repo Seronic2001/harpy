@@ -24,6 +24,9 @@ def test_cli_init_command(monkeypatch, tmp_path):
     assert (tmp_path / "problems").is_dir()
     assert (tmp_path / ".tabignore").is_file()
     assert "*.cpp" in (tmp_path / ".tabignore").read_text(encoding="utf-8")
+    rule_file = tmp_path / ".agents" / "rules" / "harpy.md"
+    assert rule_file.is_file()
+    assert "Harpy Fast Execution Rule" in rule_file.read_text(encoding="utf-8")
 
 
 def test_cli_completion(capsys):
@@ -45,6 +48,11 @@ def test_cli_setup_ai(monkeypatch, tmp_path):
     # Verify skill installed
     skill_file = tmp_path / ".gemini" / "config" / "skills" / "harpy-cp" / "SKILL.md"
     assert skill_file.is_file()
+
+    # Verify rule installed
+    rule_file = tmp_path / ".gemini" / "config" / "rules" / "harpy.md"
+    assert rule_file.is_file()
+    assert "Harpy Fast Execution Rule" in rule_file.read_text(encoding="utf-8")
 
     # Verify mcp_config.json created with mcpServers.harpy
     mcp_config_file = tmp_path / ".gemini" / "config" / "mcp_config.json"
