@@ -3,12 +3,19 @@ $ErrorActionPreference = 'Stop'
 
 function Print-Banner {
     Write-Host ""
-    Write-Host "    __  __                            " -ForegroundColor Cyan
-    Write-Host "   / / / /___ _________  __  __       " -ForegroundColor Cyan
-    Write-Host "  / /_/ / __ `/ ___/ __ \/ / / /  🦅   " -ForegroundColor Cyan
-    Write-Host " / __  / /_/ / /  / /_/ / /_/ /       " -ForegroundColor Cyan
-    Write-Host "/_/ /_/\__,_/_/  / .___/\__, /        " -ForegroundColor Cyan
-    Write-Host "                /_/    /____/         " -ForegroundColor DarkCyan
+    $lines = @(
+        '    __  __                            ',
+        '   / / / /___ _________  __  __       ',
+        '  / /_/ / __ `/ ___/ __ \/ / / /  🦅   ',
+        ' / __  / /_/ / /  / /_/ / /_/ /       ',
+        '/_/ /_/\__,_/_/  / .___/\__, /        ',
+        '                /_/    /____/         '
+    )
+    $colors = @("Cyan", "Cyan", "Cyan", "Cyan", "Cyan", "DarkCyan")
+    for ($idx = 0; $idx -lt $lines.Length; $idx++) {
+        Write-Host $lines[$idx] -ForegroundColor $colors[$idx]
+        Start-Sleep -Milliseconds 25
+    }
     Write-Host "  ⚡ Fast Competitive Programming & Interview Prep Toolkit" -ForegroundColor DarkGray
     Write-Host "  ────────────────────────────────────────────────────────" -ForegroundColor DarkGray
     Write-Host ""
@@ -21,32 +28,69 @@ try {
     $ExePath = "$InstallDir\harpy.exe"
     $Url = "https://github.com/Seronic2001/harpy/releases/latest/download/harpy-windows-x86_64.exe"
 
-    # 1. Check Architecture
-    $Arch = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+    # 1. Detect Architecture
+    $Arch = $env:PROCESSOR_ARCHITECTURE
+    if (-not $Arch) {
+        try {
+            $Arch = [System.Environment]::GetEnvironmentVariable("PROCESSOR_ARCHITECTURE")
+        } catch {}
+    }
+    if (-not $Arch) { $Arch = "AMD64" }
+    $ArchLabel = if ($Arch -eq "AMD64") { "x64" } elseif ($Arch -eq "ARM64") { "arm64" } else { $Arch }
+
     Write-Host "  ✔ Detected platform: " -NoNewline -ForegroundColor Green
-    Write-Host "Windows ($Arch)" -ForegroundColor White
+    Write-Host "Windows ($ArchLabel)" -ForegroundColor White
 
     # 2. Prepare Directory
     if (-not (Test-Path $InstallDir)) {
         New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     }
 
-    # 3. Download Binary
-    Write-Host "  ▸ Downloading Harpy standalone binary... " -NoNewline -ForegroundColor Cyan
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     $TmpFile = "$InstallDir\.harpy_download.tmp"
+    if (Test-Path $TmpFile) { Remove-Item $TmpFile -Force -ErrorAction SilentlyContinue }
 
-    $ProgressPreference = 'SilentlyContinue'
-    Invoke-WebRequest -Uri $Url -OutFile $TmpFile -UseBasicParsing
+    # 3. Asynchronous Download with Real-Time Animated Spinner
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+    $wc = New-Object System.Net.WebClient
+    $wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) harpy-installer")
+
+    $spinChars = @('⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏')
+    $i = 0
+
+    $wc.DownloadFileAsync([System.Uri]$Url, $TmpFile)
+
+    while ($wc.IsBusy) {
+        $mbStr = ""
+        if (Test-Path $TmpFile) {
+            try {
+                $bytes = (Get-Item $TmpFile).Length
+                if ($bytes -gt 0) {
+                    $mb = [Math]::Round($bytes / 1MB, 1)
+                    $mbStr = " ($mb MB)"
+                }
+            } catch {}
+        }
+        Write-Host ("`r  " + $spinChars[$i] + " Downloading Harpy standalone binary..." + $mbStr + "   ") -NoNewline -ForegroundColor Cyan
+        $i = ($i + 1) % $spinChars.Length
+        Start-Sleep -Milliseconds 70
+    }
+
+    # Verify download succeeded or fallback
+    if (-not (Test-Path $TmpFile) -or (Get-Item $TmpFile).Length -lt 1000000) {
+        Write-Host "`r  ▸ Retrying download with standard transport...               " -ForegroundColor Yellow
+        $ProgressPreference = 'SilentlyContinue'
+        Invoke-WebRequest -Uri $Url -OutFile $TmpFile -UseBasicParsing
+    }
+
+    $finalSize = [Math]::Round((Get-Item $TmpFile).Length / 1MB, 1)
     Move-Item -Path $TmpFile -Destination $ExePath -Force
-
-    Write-Host "`r  ✔ Downloaded Harpy standalone binary    " -ForegroundColor Green
+    Write-Host "`r  ✔ Downloaded Harpy standalone binary ($finalSize MB)            " -ForegroundColor Green
 
     # 4. Verify Execution
     $Version = "harpy"
     try {
         $VersionOutput = & "$ExePath" --version 2>$null
-        if ($VersionOutput) { $Version = $VersionOutput }
+        if ($VersionOutput) { $Version = $VersionOutput.Trim() }
     } catch {}
 
     Write-Host "  ✔ Verified binary: " -NoNewline -ForegroundColor Green
@@ -85,7 +129,10 @@ try {
     Write-Host "  │    1. Auto-configure AI & MCP:   " -NoNewline -ForegroundColor Cyan
     Write-Host "harpy setup-ai              " -NoNewline -ForegroundColor Green
     Write-Host "│" -ForegroundColor Cyan
-    Write-Host "  │    2. Start practicing:          " -NoNewline -ForegroundColor Cyan
+    Write-Host "  │    2. Enable completions:        " -NoNewline -ForegroundColor Cyan
+    Write-Host "harpy completion install    " -NoNewline -ForegroundColor Green
+    Write-Host "│" -ForegroundColor Cyan
+    Write-Host "  │    3. Start practicing:          " -NoNewline -ForegroundColor Cyan
     Write-Host "harpy init                  " -NoNewline -ForegroundColor Green
     Write-Host "│" -ForegroundColor Cyan
     if ($PathUpdated) {
