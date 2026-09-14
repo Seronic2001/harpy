@@ -34,9 +34,57 @@ class TestCase(BaseModel):
         return val
 
 
+CSES_CATEGORIES: Dict[str, List[str]] = {
+    "dynamic-programming": ["dp", "dynamic-programming", "dynamic programming", "memoization", "knapsack", "lis", "grid-dp", "digit-dp", "interval-dp"],
+    "graph-algorithms": ["graph", "graphs", "graph-algorithms", "graph algorithms", "bfs", "dfs", "dijkstra", "bellman-ford", "floyd-warshall", "mst", "topological-sort", "topological sort", "shortest-path", "shortest path"],
+    "tree-algorithms": ["tree", "trees", "tree-algorithms", "tree algorithms", "binary-tree", "binary tree", "bst", "lca", "tree-dp"],
+    "sorting-and-searching": ["sorting", "searching", "sorting-and-searching", "sorting and searching", "binary-search", "binary search", "two-pointers", "two pointers", "sliding-window", "sliding window", "ternary-search"],
+    "greedy-algorithms": ["greedy", "greedy-algorithms", "greedy algorithms", "interval-scheduling"],
+    "range-queries": ["range-queries", "range queries", "segment-tree", "segment tree", "fenwick", "fenwick-tree", "bit", "sparse-table"],
+    "mathematics": ["math", "mathematics", "maths", "number-theory", "number theory", "combinatorics", "modular-arithmetic", "probability"],
+    "string-algorithms": ["string", "strings", "string-algorithms", "string algorithms", "trie", "kmp", "z-algorithm", "suffix-array", "hashing"],
+    "geometry": ["geometry", "convex-hull", "polygon", "point-location"],
+    "bit-manipulation": ["bit", "bits", "bit-manipulation", "bit manipulation", "bitmask"],
+    "introductory-problems": ["intro", "introductory", "introductory-problems", "introductory problems", "simulation", "implementation", "ad-hoc", "basics"],
+    "advanced-techniques": ["advanced", "advanced-techniques", "advanced techniques", "meet-in-the-middle", "mo", "hld"],
+}
+
+DEFAULT_CATEGORY = "general"
+
+
+def normalize_category(category: Optional[str] = None, tags: Optional[List[str]] = None) -> str:
+    """Normalize a category string or infer one from tags to a canonical CSES category."""
+    # 1. Check explicit category
+    if category:
+        c_clean = category.strip().lower().replace("_", "-")
+        for canon, aliases in CSES_CATEGORIES.items():
+            if c_clean == canon or c_clean in aliases:
+                return canon
+        clean_custom = re.sub(r"[^\w\s-]", "", c_clean)
+        return re.sub(r"[-\s]+", "-", clean_custom).strip("-") or DEFAULT_CATEGORY
+
+    # 2. Infer from tags
+    if tags:
+        for tag in tags:
+            t_clean = tag.strip().lower().replace("_", "-")
+            # Exact match check first
+            for canon, aliases in CSES_CATEGORIES.items():
+                if t_clean == canon or t_clean in aliases:
+                    return canon
+            # Token/word boundary match to prevent short alias false positives (e.g. 'mo' in 'memoization')
+            for canon, aliases in CSES_CATEGORIES.items():
+                for alias in aliases:
+                    pattern = r"(^|[\s_-])" + re.escape(alias) + r"($|[\s_-])"
+                    if re.search(pattern, t_clean):
+                        return canon
+
+    return DEFAULT_CATEGORY
+
+
 class ProblemSpec(BaseModel):
     title: str
     slug: Optional[str] = None
+    category: Optional[str] = None
     difficulty: str = "Medium"
     tags: List[str] = Field(default_factory=list)
     description: str = ""
@@ -56,6 +104,9 @@ class ProblemSpec(BaseModel):
             return self.slug
         clean = re.sub(r"[^\w\s-]", "", self.title.lower())
         return re.sub(r"[-\s]+", "-", clean).strip("-") or "problem"
+
+    def get_category(self) -> str:
+        return normalize_category(self.category, self.tags)
 
     def to_competitive_companion_dict(self) -> Dict[str, Any]:
         """Convert to the standard Competitive Companion JSON format."""
@@ -92,7 +143,7 @@ class ProblemSpec(BaseModel):
         lines = [
             f"# {self.title}",
             "",
-            f"**Difficulty**: `{self.difficulty}`",
+            f"**Difficulty**: `{self.difficulty}` | **Category**: `{self.get_category()}`",
         ]
         if self.tags:
             lines.append(f"**Topics**: {', '.join(f'`{t}`' for t in self.tags)}")

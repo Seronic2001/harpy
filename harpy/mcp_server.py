@@ -18,6 +18,7 @@ server = MCPServer("harpy")
 def harpy_setup_problem(
     title: str,
     description: str,
+    category: Optional[str] = None,
     difficulty: str = "Medium",
     tags: Optional[List[str]] = None,
     input_format: str = "",
@@ -32,10 +33,11 @@ def harpy_setup_problem(
 ) -> str:
     """
     Format a competitive programming / LeetCode problem, generate markdown,
-    starter code, and directory structure.
+    starter code, and directory structure categorized by CSES topics (e.g. dynamic-programming, graph-algorithms).
     """
     spec = ProblemSpec(
         title=title,
+        category=category,
         difficulty=difficulty,
         tags=tags or [],
         description=description,
@@ -48,7 +50,7 @@ def harpy_setup_problem(
         cpp_main_parser=cpp_main_parser,
     )
 
-    ws = create_problem_workspace(spec, base_dir=base_dir, lang=lang)
+    ws = create_problem_workspace(spec, base_dir=base_dir, category=category, lang=lang)
 
     # Save problem.json for persistence and CPH push
     json_path = ws["dir"] / "problem.json"
@@ -58,6 +60,7 @@ def harpy_setup_problem(
         {
             "status": "success",
             "slug": spec.get_slug(),
+            "category": spec.get_category(),
             "workspace_dir": str(ws["dir"].resolve()),
             "markdown_file": str(ws["markdown"].resolve()),
             "solution_file": str(ws["solution"].resolve()),

@@ -127,18 +127,36 @@ DEFAULT_GENERATORS = {
 def create_problem_workspace(
     spec: ProblemSpec,
     base_dir: Path | str = ".",
+    category: Optional[str] = None,
     lang: str = "cpp",
 ) -> Dict[str, Path]:
     """
     Creates a standardized folder for the problem:
-    <base_dir>/<slug>/
+    <base_dir>/problems/<category>/<slug>/
        problem.md
        <slug>.<lang> (main starter file for the user)
        tests/
           in_1.txt, out_1.txt, ...
     """
     slug = spec.get_slug()
-    base = Path(base_dir).resolve() / slug
+    category_slug = spec.get_category() if category is None else spec.get_category()
+    if category:
+        from harpy.models import normalize_category
+        category_slug = normalize_category(category, spec.tags)
+    spec.category = category_slug
+
+    target_base = Path(base_dir).resolve()
+    if target_base.name == "problems":
+        base = target_base / category_slug / slug
+    elif (target_base / "problems").exists():
+        base = target_base / "problems" / category_slug / slug
+    elif str(base_dir) in (".", "./", ""):
+        problems_dir = target_base / "problems"
+        problems_dir.mkdir(parents=True, exist_ok=True)
+        base = problems_dir / category_slug / slug
+    else:
+        base = target_base / category_slug / slug
+
     base.mkdir(parents=True, exist_ok=True)
 
     # 1. Write problem.md
@@ -166,9 +184,15 @@ def create_problem_workspace(
             (tc.normalized_output() + "\n") if tc.output else "", encoding="utf-8"
         )
 
+    # 4. Write problem.json
+    json_path = base / "problem.json"
+    json_path.write_text(spec.model_dump_json(indent=2), encoding="utf-8")
+
     return {
         "dir": base,
+        "category": category_slug,
         "markdown": md_path,
         "solution": main_code_path,
+        "problem_json": json_path,
         "tests_dir": tests_dir,
     }

@@ -18,14 +18,27 @@ From the provided image or text:
 1. Determine:
    - **Title**: Clean descriptive title (e.g., "Maximum Subarray Sum").
    - **Slug**: Kebab-case name (e.g., `maximum-subarray-sum`).
+   - **Category**: Classify into one of standard CSES categories:
+     - `dynamic-programming` (e.g., knapsack, LIS, grid DP)
+     - `graph-algorithms` (e.g., BFS, DFS, Dijkstra, flows)
+     - `tree-algorithms` (e.g., tree traversals, LCA, diameter)
+     - `sorting-and-searching` (e.g., binary search, two pointers)
+     - `greedy-algorithms` (e.g., intervals, scheduling)
+     - `range-queries` (e.g., segment tree, Fenwick, prefix sums)
+     - `mathematics` (e.g., number theory, combinatorics, modular arithmetic)
+     - `string-algorithms` (e.g., hashing, KMP, trie)
+     - `geometry` (e.g., convex hull, point location)
+     - `bit-manipulation` (e.g., bitmasks, XOR problems)
+     - `introductory-problems` (e.g., simulation, basic loops)
+     - `advanced-techniques`
    - **Difficulty**: "Easy", "Medium", or "Hard".
    - **Topics**: e.g., `["Dynamic Programming", "Two Pointers"]`.
    - **Description**: Clear problem statement.
    - **Input & Output Format**: Precise specifications.
    - **Constraints**: Express with LaTeX math (e.g., `$1 \le N \le 10^5$`).
-2. Run `harpy_setup_problem` or Harpy API to create:
-   - `problems/<slug>/problem.md`
-   - `problems/<slug>/<slug>.cpp`
+2. Run `harpy_setup_problem` with `category` (or Harpy API) to create:
+   - `problems/<category>/<slug>/problem.md`
+   - `problems/<category>/<slug>/<slug>.cpp`
 
 ### 2. File Template Requirement: User Implements `solve(...)` (LeetCode-style)
 The starter code file **must be named `<problem_slug>.cpp`** and must:
@@ -65,16 +78,17 @@ The starter code file **must be named `<problem_slug>.cpp`** and must:
 
 ### 5. Present to the User
 Report:
-- Clean summary of the problem and constraints.
-- Direct clickable link to the generated starter file: [`problems/<slug>/<slug>.cpp`](file://problems/<slug>/<slug>.cpp).
+- Clean summary of the problem, category, and constraints.
+- Direct clickable link to the generated starter file: [`problems/<category>/<slug>/<slug>.cpp`](file://problems/<category>/<slug>/<slug>.cpp).
 - Summary of the generated test cases (samples, edge cases).
 - The exact command the user can run when ready:
    ```bash
    harpy test <slug>
    ```
-   (or `harpy test problems/<slug>/<slug>.cpp`)
+   (Note: `harpy test` automatically searches across all category subfolders!)
 
 ### 6. Testing the User's Solution
 When the user says "test my code", "run tests", or asks for help debugging:
-1. Run `harpy_test_solution` or execute `harpy test problems/<slug>/<slug>.cpp`.
+1. Run `harpy_test_solution` or execute `harpy test <slug>` (or `harpy test problems/<category>/<slug>/<slug>.cpp`).
 2. Display the status (PASS / FAIL / TLE / RTE) and explain any failures if requested.
+

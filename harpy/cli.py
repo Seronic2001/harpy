@@ -48,9 +48,9 @@ _harpy_completions()
                     candidates+="$f "
                 fi
             done
-            # 2. Problem solution files and directories in problems/
+            # 2. Problem solution files and directories in problems/ (including categories)
             if [ -d "problems" ]; then
-                for d in problems/*; do
+                for d in problems/* problems/*/*; do
                     if [ -d "$d" ]; then
                         candidates+="$d/ "
                         for f in "$d"/*.cpp "$d"/*.cc "$d"/*.cxx "$d"/*.py "$d"/*.java; do
@@ -71,7 +71,7 @@ _harpy_completions()
         push)
             local dirs=""
             if [ -d "problems" ]; then
-                for d in problems/*; do
+                for d in problems/* problems/*/*; do
                     if [ -d "$d" ]; then
                         dirs+="$(basename "$d") $d/ "
                     fi
@@ -97,10 +97,11 @@ complete -F _harpy_completions harpy
 def find_solution_file(query: str) -> Optional[Path]:
     """
     Intelligently resolves a solution file from user input:
-    - Direct path: "problems/two-sum/solution.cpp"
-    - Filename only: "lexicographically-minimal-walk.cpp"
-    - Problem slug: "lexicographically-minimal-walk"
-    - Directory: "problems/lexicographically-minimal-walk"
+    - Direct path: "problems/dynamic-programming/maximum-subarray-sum/maximum-subarray-sum.cpp"
+    - Filename only: "maximum-subarray-sum.cpp"
+    - Problem slug: "maximum-subarray-sum"
+    - Category + slug: "dynamic-programming/maximum-subarray-sum"
+    - Directory: "problems/dynamic-programming/maximum-subarray-sum"
     """
     p = Path(query)
 
@@ -115,8 +116,14 @@ def find_solution_file(query: str) -> Optional[Path]:
             if matches:
                 return matches[0].resolve()
 
-    # 3. Check under problems/
-    for base in (Path("problems"), Path(".")):
+    # 3. Check under problems/, current dir, and all category subdirectories
+    bases = [Path("problems"), Path(".")]
+    if Path("problems").exists():
+        for cat in Path("problems").iterdir():
+            if cat.is_dir():
+                bases.append(cat)
+
+    for base in bases:
         candidates = [
             base / query,
             base / f"{query}.cpp",
@@ -130,9 +137,21 @@ def find_solution_file(query: str) -> Optional[Path]:
             if c.is_file():
                 return c.resolve()
 
-    # 4. Fuzzy match inside problems/
+    # 4. Search recursively inside problems/
     if Path("problems").exists():
         clean_q = query.replace(".cpp", "").replace(".py", "")
+        # First exact file stem match in any subfolder
+        for match in Path("problems").rglob(f"{clean_q}.*"):
+            if match.is_file() and match.suffix in (".cpp", ".py", ".java"):
+                return match.resolve()
+        # Then exact directory match
+        for d in Path("problems").rglob(f"{clean_q}"):
+            if d.is_dir():
+                for ext in ("*.cpp", "*.py", "*.java"):
+                    matches = list(d.glob(ext))
+                    if matches:
+                        return matches[0].resolve()
+        # Finally fuzzy match
         for match in Path("problems").rglob(f"*{clean_q}*"):
             if match.is_file() and match.suffix in (".cpp", ".py", ".java"):
                 return match.resolve()
@@ -147,9 +166,17 @@ def cmd_test(args: argparse.Namespace) -> int:
         console.print(f"[bold red]Error: Could not find solution file for:[/bold red] {args.solution}")
         if Path("problems").exists():
             console.print("[dim]Available problems in ./problems/:[/dim]")
-            for p in sorted(Path("problems").iterdir()):
-                if p.is_dir():
-                    console.print(f"  • {p.name}")
+            for item in sorted(Path("problems").iterdir()):
+                if item.is_dir():
+                    children = [c for c in sorted(item.iterdir()) if c.is_dir()]
+                    if (item / "problem.json").exists() or any(item.glob("*.cpp")):
+                        console.print(f"  • {item.name}")
+                    elif children:
+                        console.print(f"  [cyan][{item.name}][/cyan]")
+                        for cp in children:
+                            console.print(f"    • {cp.name}")
+                    else:
+                        console.print(f"  • {item.name}")
         return 1
 
     prob_dir = source_path.parent
@@ -179,23 +206,21 @@ def cmd_test(args: argparse.Namespace) -> int:
         if cph_dir.exists():
             for prob_file in cph_dir.glob("*.prob"):
                 try:
-                    data = json.loads(prob_file.read_text(encoding="utf-8"))
-                    for i, t in enumerate(data.get("tests", []), 1):
+                    cph_data = json.loads(prob_file.read_text(encoding="utf-8"))
+                    for idx, test_dict in enumerate(cph_data.get("tests", []), 1):
                         testcases.append(
                             TestCase(
-                                id=i,
-                                input=t.get("input", ""),
-                                output=t.get("expectedOutput", ""),
+                                id=idx,
+                                input=test_dict.get("input", ""),
+                                output=test_dict.get("output", ""),
                                 kind=TestCaseKind.SAMPLE,
                             )
                         )
                 except Exception:
-                    continue
+                    pass
 
     if not testcases:
-        console.print(
-            f"[bold yellow]No test cases found in {tests_dir} or {prob_dir / '.cph'}[/bold yellow]"
-        )
+        console.print(f"[bold red]Error: No test cases found in {tests_dir} or {prob_dir / '.cph'}[/bold red]")
         return 1
 
     results = execute_and_render_tests(
@@ -214,10 +239,18 @@ def cmd_push(args: argparse.Namespace) -> int:
         prob_json = target
 
     if not prob_json.exists():
-        # Check inside problems/
+        # Check inside problems/ directly
         alt = Path("problems") / args.target / "problem.json"
         if alt.exists():
             prob_json = alt
+        elif Path("problems").exists():
+            # Check inside category subfolders
+            found = list(Path("problems").rglob(f"{args.target}/problem.json"))
+            if found:
+                prob_json = found[0]
+            else:
+                console.print(f"[bold red]Error: Problem specification not found at {prob_json}[/bold red]")
+                return 1
         else:
             console.print(f"[bold red]Error: Problem specification not found at {prob_json}[/bold red]")
             return 1

@@ -263,9 +263,9 @@ For Neovim, tmux, and terminal-first users:
 
 ## 📁 Problem Structure
 
-When a problem is created, Harpy structures it cleanly:
+Harpy automatically organizes problems by algorithmic topic into standard CSES category subfolders:
 ```text
-problems/<slug>/
+problems/<category>/<slug>/
 ├── problem.md         # LeetCode-style specification with LaTeX constraints
 ├── problem.json       # Structured problem metadata & test cases
 ├── <slug>.cpp         # Starter template with pre-filled typed solve(...)
@@ -276,6 +276,8 @@ problems/<slug>/
 └── .cph/
     └── .<slug>.cpp_<hash>.prob  # Native CPH offline test file
 ```
+
+Supported CSES categories include `dynamic-programming`, `graph-algorithms`, `tree-algorithms`, `sorting-and-searching`, `greedy-algorithms`, `range-queries`, `mathematics`, `string-algorithms`, `geometry`, `bit-manipulation`, `introductory-problems`, and `advanced-techniques`.
 
 ---
 
