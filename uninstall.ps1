@@ -25,12 +25,26 @@ try {
     Write-Host "  ▸ Checking pip / pipx installations..." -ForegroundColor DarkGray
     $pipCmd = Get-Command "pip" -ErrorAction SilentlyContinue
     if ($pipCmd) {
-        pip uninstall -y harpy-cp 2>$null | Out-Null
-        Write-Host "  ✔ Uninstalled harpy-cp from pip" -ForegroundColor Green
+        $pipResult = pip uninstall -y harpy-cp 2>&1
+        if ($pipResult -match "Successfully") {
+            Write-Host "  ✔ Uninstalled harpy-cp from pip" -ForegroundColor Green
+        }
     }
     $pipxCmd = Get-Command "pipx" -ErrorAction SilentlyContinue
     if ($pipxCmd) {
         pipx uninstall harpy-cp 2>$null | Out-Null
+    }
+    # Also remove pip entry point scripts directly
+    $PythonScripts = (python -c "import sysconfig; print(sysconfig.get_path('scripts'))" 2>$null)
+    if ($PythonScripts) {
+        foreach ($ext in @("harpy.exe", "harpy-script.py")) {
+            $ep = Join-Path $PythonScripts $ext
+            if (Test-Path $ep) {
+                Remove-Item -Path $ep -Force -ErrorAction SilentlyContinue
+                Write-Host "  ✔ Removed pip entry point: " -NoNewline -ForegroundColor Green
+                Write-Host "$ep" -ForegroundColor White
+            }
+        }
     }
 
     # 2. Remove Standalone Executable Directory
