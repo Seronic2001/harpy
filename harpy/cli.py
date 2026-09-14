@@ -645,13 +645,24 @@ Follow this procedure whenever the user:
    - Default to C++ (`cpp`).
    - If the user explicitly asks for Python, or if the system lacks a C++ compiler (`g++` / `clang++`), pass `--lang py` to `harpy create`.
 
+6. ⛔ **DO NOT VIEW GENERATED FILES AFTER `harpy create`**:
+   - Do **NOT** open or `cat` the generated `.cpp`, `.py`, `problem.md`, or test files after scaffolding.
+   - `harpy create` already prints a full summary of what was created and any oracle errors.
+   - Viewing files wastes an entire agent turn for zero new information.
+
 ---
 
 ## ⚡ Direct 1-Turn Setup: Pipe JSON to `harpy create -`
 
-Do not create intermediate scratch files. Execute problem setup in **a single terminal command** using a heredoc:
+Do not create intermediate scratch files. Execute problem setup in **a single terminal command**.
 
-### For C++:
+> [!IMPORTANT]
+> **Detect the shell FIRST.** Bash heredocs (`<< 'EOF'`) do NOT work in PowerShell.
+> - **Linux / macOS / Git Bash / WSL**: Use `<< 'EOF'` heredoc (shown below).
+> - **Windows PowerShell / pwsh**: Use the PowerShell `@'...'@` here-string (shown below).
+> - If unsure, check `$env:OS` or `uname` before running the command.
+
+### Linux / macOS / Git Bash (heredoc):
 ```bash
 harpy create --async - << 'EOF'
 {
@@ -662,24 +673,19 @@ harpy create --async - << 'EOF'
   "description": "Given a directed graph with characters on edges, find the lexicographically smallest path...",
   "input_format": "The first line contains N and M...",
   "output_format": "Print the string formed by the walk...",
-  "constraints": [
-    "$1 \\le N, M \\le 10^5$",
-    "Edges consist of lowercase Latin letters."
-  ],
+  "constraints": ["$1 \\le N, M \\le 10^5$"],
   "cpp_signature": "string solve(int n, int m, int k, const vector<vector<pair<int, char>>>& adj)",
   "cpp_main_parser": "int n, m, k;\\ncin >> n >> m >> k;\\nvector<vector<pair<int, char>>> adj(n + 1);\\nfor (int i = 0; i < m; ++i) {\\n    int u, v; char c;\\n    cin >> u >> v >> c;\\n    adj[u].push_back({v, c});\\n}\\ncout << solve(n, m, k, adj) << \\\"\\\\n\\\";",
-  "testcases": [
-    {"input": "4 4 2\\n1 2 a\\n2 4 b\\n1 3 a\\n3 4 a\\n", "kind": "sample"}
-  ],
-  "reference_code": "import sys\\n# Python reference solver reading sys.stdin and printing the correct answer\\ndef solve():\\n    lines = sys.stdin.read().split()\\n    ...\\nsolve()\\n",
-  "test_generator": "def generate():\\n    # Minimal / Edge cases\\n    yield ('1 0 1\\\\n', 'edge')\\n    # Stress cases (programmatic synthesis without typing!)\\n    import random\\n    yield (f'100 200 50\\\\n' + '...', 'stress')\\n"
+  "testcases": [{"input": "4 4 2\\n1 2 a\\n2 4 b\\n1 3 a\\n3 4 a\\n", "kind": "sample"}],
+  "reference_code": "import sys\\ndef solve():\\n    ...\\nsolve()\\n",
+  "test_generator": "def generate():\\n    yield ('1 0 1\\\\n', 'edge')\\n"
 }
 EOF
 ```
 
-### For Python:
-```bash
-harpy create --lang py --async - << 'EOF'
+### Windows PowerShell / pwsh (here-string):
+```powershell
+@'
 {
   "title": "Lexicographically Minimal Walk",
   "category": "graph-algorithms",
@@ -688,18 +694,17 @@ harpy create --lang py --async - << 'EOF'
   "description": "Given a directed graph with characters on edges, find the lexicographically smallest path...",
   "input_format": "The first line contains N and M...",
   "output_format": "Print the string formed by the walk...",
-  "constraints": [
-    "$1 \\le N, M \\le 10^5$",
-    "Edges consist of lowercase Latin letters."
-  ],
-  "testcases": [
-    {"input": "4 4 2\\n1 2 a\\n2 4 b\\n1 3 a\\n3 4 a\\n", "kind": "sample"}
-  ],
+  "constraints": ["$1 \\le N, M \\le 10^5$"],
+  "cpp_signature": "string solve(int n, int m, int k, const vector<vector<pair<int, char>>>& adj)",
+  "cpp_main_parser": "int n, m, k;\\ncin >> n >> m >> k;\\nvector<vector<pair<int, char>>> adj(n + 1);\\nfor (int i = 0; i < m; ++i) {\\n    int u, v; char c;\\n    cin >> u >> v >> c;\\n    adj[u].push_back({v, c});\\n}\\ncout << solve(n, m, k, adj) << \\\"\\\\n\\\";",
+  "testcases": [{"input": "4 4 2\\n1 2 a\\n2 4 b\\n1 3 a\\n3 4 a\\n", "kind": "sample"}],
   "reference_code": "import sys\\ndef solve():\\n    ...\\nsolve()\\n",
   "test_generator": "def generate():\\n    yield ('1 0 1\\\\n', 'edge')\\n"
 }
-EOF
+'@ | harpy create --async -
 ```
+
+For Python solutions, add `--lang py` and omit `cpp_signature` / `cpp_main_parser`.
 
 > [!TIP]
 > **Sub-Second Scaffolding with `--async`**:
