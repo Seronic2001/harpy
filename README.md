@@ -61,9 +61,12 @@ pipx install git+https://github.com/Seronic2001/harpy.git
 
 # Or via standard pip
 pip install git+https://github.com/Seronic2001/harpy.git
+```
 
-# Or from PyPI
-pip install harpy-cp
+To update to the latest version later:
+```bash
+pipx install --force git+https://github.com/Seronic2001/harpy.git
+# Or: pip install --upgrade git+https://github.com/Seronic2001/harpy.git
 ```
 
 Or install from source:
