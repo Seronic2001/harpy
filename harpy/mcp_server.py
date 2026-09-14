@@ -7,7 +7,7 @@ from mcp.server.mcpserver import MCPServer
 from harpy.cph import dispatch_to_cph, write_cph_file
 from harpy.formatter import create_problem_workspace
 from harpy.models import ProblemSpec, TestCase, TestCaseKind
-from harpy.oracle import verify_and_generate_testcases
+from harpy.oracle import execute_test_generator, verify_and_generate_testcases
 from harpy.runner import SolutionRunner, compare_outputs
 
 
@@ -30,6 +30,7 @@ def harpy_setup_problem(
     base_dir: str = ".",
     cpp_signature: Optional[str] = None,
     cpp_main_parser: Optional[str] = None,
+    test_generator: Optional[str] = None,
 ) -> str:
     """
     Format a competitive programming / LeetCode problem, generate markdown,
@@ -48,6 +49,7 @@ def harpy_setup_problem(
         memory_limit_mb=memory_limit_mb,
         cpp_signature=cpp_signature,
         cpp_main_parser=cpp_main_parser,
+        test_generator=test_generator,
     )
 
     ws = create_problem_workspace(spec, base_dir=base_dir, category=category, lang=lang)
@@ -74,11 +76,12 @@ def harpy_setup_problem(
 def harpy_oracle_generate_tests(
     problem_dir: str,
     reference_python_code: str,
-    inputs: List[Dict[str, Any]],
+    inputs: Optional[List[Dict[str, Any]]] = None,
+    test_generator: Optional[str] = None,
     timeout_sec: float = 3.0,
 ) -> str:
     """
-    Run a Python reference oracle on given input test candidates to compute
+    Run a Python reference oracle on given input test candidates (or test_generator) to compute
     authoritative, guaranteed expected outputs, saving them to tests/ and problem.json.
     Each item in inputs: {"input": "...", "kind": "sample"|"edge"|"stress", "explanation": "..."}
     """
@@ -92,15 +95,28 @@ def harpy_oracle_generate_tests(
 
     spec = ProblemSpec.model_validate_json(spec_json.read_text(encoding="utf-8"))
     spec.reference_code = reference_python_code
+    if test_generator:
+        spec.test_generator = test_generator
 
-    input_tuples = [
-        (
-            item.get("input", ""),
-            TestCaseKind(item.get("kind", "sample")),
-            item.get("explanation"),
-        )
-        for item in inputs
-    ]
+    input_tuples: List[Tuple[str, TestCaseKind, Optional[str]]] = []
+    if inputs:
+        for item in inputs:
+            input_tuples.append(
+                (
+                    item.get("input", ""),
+                    TestCaseKind(item.get("kind", "sample")),
+                    item.get("explanation"),
+                )
+            )
+
+    if test_generator:
+        try:
+            gen_tuples = execute_test_generator(test_generator)
+            input_tuples.extend(gen_tuples)
+        except Exception as e:
+            return json.dumps(
+                {"status": "error", "message": f"Test generator error: {e}"}
+            )
 
     try:
         verified_cases = verify_and_generate_testcases(

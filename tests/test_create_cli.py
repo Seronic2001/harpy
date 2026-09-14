@@ -79,7 +79,7 @@ if lines:
     assert code == 0
 
     captured = capsys.readouterr()
-    assert "Verified 2 test cases with reference oracle" in captured.out
+    assert "Verified 2 total test cases with reference oracle" in captured.out
 
     prob_dir = tmp_path / "problems" / "introductory-problems" / "addition-oracle-test"
     assert (prob_dir / "tests" / "out_01.txt").read_text().strip() == "8"

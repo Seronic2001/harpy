@@ -12,7 +12,7 @@ from harpy import __version__
 from harpy.cph import dispatch_to_cph, write_cph_file
 from harpy.formatter import create_problem_workspace
 from harpy.models import ProblemSpec, TestCase, TestCaseKind
-from harpy.oracle import verify_and_generate_testcases
+from harpy.oracle import execute_test_generator, verify_and_generate_testcases
 from harpy.runner import execute_and_render_tests
 
 
@@ -334,6 +334,14 @@ def cmd_create(args: argparse.Namespace) -> int:
             console.print(f"[bold red]Error: Oracle script not found:[/bold red] {args.oracle}")
             return 1
 
+    if getattr(args, "generator", None):
+        gen_path = Path(args.generator)
+        if gen_path.is_file():
+            spec_data["test_generator"] = gen_path.read_text(encoding="utf-8")
+        else:
+            console.print(f"[bold red]Error: Test generator script not found:[/bold red] {args.generator}")
+            return 1
+
     if not spec_data.get("title"):
         console.print("[bold red]Error: Problem title is required (provide in spec JSON or with --title).[/bold red]")
         return 1
@@ -344,22 +352,39 @@ def cmd_create(args: argparse.Namespace) -> int:
         console.print(f"[bold red]Error validating ProblemSpec:[/bold red] {e}")
         return 1
 
-    # 1. Oracle testcase verification if reference_code is present
-    if spec.reference_code and spec.testcases:
-        raw_inputs = [
-            (tc.normalized_input(), tc.kind, tc.explanation)
-            for tc in spec.testcases
-        ]
+    # 1. Collect inputs (from explicit testcases + test_generator)
+    raw_inputs = [
+        (tc.normalized_input(), tc.kind, tc.explanation)
+        for tc in spec.testcases
+    ]
+
+    if spec.test_generator:
+        try:
+            console.print("[cyan]Running Python algorithmic test generator...[/cyan]")
+            generated_inputs = execute_test_generator(spec.test_generator)
+            console.print(f"[bold green]✔ Generated {len(generated_inputs)} test cases programmatically.[/bold green]")
+            raw_inputs.extend(generated_inputs)
+        except Exception as e:
+            console.print(f"[bold red]Test generator failed:[/bold red] {e}")
+            return 1
+
+    # 2. Oracle testcase verification if reference_code is present
+    if spec.reference_code and raw_inputs:
         try:
             console.print("[cyan]Running Python reference oracle across test cases...[/cyan]")
             verified_cases = verify_and_generate_testcases(
                 spec.reference_code, raw_inputs, timeout_sec=float(spec.time_limit_ms) / 1000.0 + 2.0
             )
             spec.testcases = verified_cases
-            console.print(f"[bold green]✔ Verified {len(verified_cases)} test cases with reference oracle.[/bold green]")
+            console.print(f"[bold green]✔ Verified {len(verified_cases)} total test cases with reference oracle.[/bold green]")
         except Exception as e:
             console.print(f"[bold red]Oracle verification failed:[/bold red] {e}")
             return 1
+    elif raw_inputs and not spec.testcases:
+        spec.testcases = [
+            TestCase(id=idx, input=inp, output="", kind=kind, explanation=expl)
+            for idx, (inp, kind, expl) in enumerate(raw_inputs, 1)
+        ]
 
     # 2. Create problem workspace
     lang = getattr(args, "lang", "cpp") or "cpp"
@@ -575,6 +600,9 @@ def main() -> int:
     )
     create_parser.add_argument("--tags", help="Comma-separated topics/tags")
     create_parser.add_argument("--oracle", help="Path to Python reference solver script")
+    create_parser.add_argument(
+        "-g", "--generator", help="Path to Python script containing algorithmic test generator"
+    )
     create_parser.add_argument("--lang", default="cpp", help="Starter code language (cpp/py)")
     create_parser.add_argument("--base-dir", default=".", help="Base directory for problems")
     create_parser.add_argument(

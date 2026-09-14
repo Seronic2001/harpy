@@ -55,18 +55,15 @@ harpy create - << 'EOF'
   "cpp_signature": "string solve(int n, int m, int k, const vector<vector<pair<int, char>>>& adj)",
   "cpp_main_parser": "int n, m, k;\ncin >> n >> m >> k;\nvector<vector<pair<int, char>>> adj(n + 1);\nfor (int i = 0; i < m; ++i) {\n    int u, v; char c;\n    cin >> u >> v >> c;\n    adj[u].push_back({v, c});\n}\ncout << solve(n, m, k, adj) << \"\\n\";",
   "reference_code": "import sys\n# Python reference solver reading sys.stdin and printing the correct answer\ndef solve():\n    lines = sys.stdin.read().split()\n    ...\nsolve()\n",
-  "testcases": [
-    {"input": "4 4 2\n1 2 a\n2 4 b\n1 3 a\n3 4 a\n", "kind": "sample"},
-    {"input": "1 0 1\n", "kind": "edge"},
-    {"input": "...", "kind": "stress"}
-  ]
+  "test_generator": "def generate():\n    # 1. Samples from statement\n    yield ('4 4 2\\n1 2 a\\n2 4 b\\n1 3 a\\n3 4 a\\n', 'sample')\n    # 2. Minimal / Edge cases\n    yield ('1 0 1\\n', 'edge')\n    # 3. Stress cases (programmatic synthesis without typing!)\n    import random\n    yield (f'100 200 50\\n' + '...', 'stress')\n"
 }
 EOF
 ```
 *(Fallback if `harpy` binary is not in PATH: `python3 -m harpy.cli create - << 'EOF'...`)*
 
 > [!TIP]
-> Notice that `testcases` only need `"input"` (and optional `"kind"` / `"explanation"`). You **do not** need to precompute `"output"`; Harpy's Python reference oracle automatically runs against each input and populates the authoritative expected outputs.
+> **Use `test_generator` to save 80% tokens & time**:
+> Instead of typing large matrices, graphs, or numbers character-by-character into `"testcases"`, write a 5-line `test_generator` snippet! It yields `(input_str, kind)` tuples. Harpy runs the generator locally to synthesize 10–20 test cases, then runs `reference_code` on all of them to compute exact verified outputs. (You can also provide explicit `"testcases"` if preferred).
 
 #### CSES Categories:
 Classify into one of the 12 standard CSES categories:
