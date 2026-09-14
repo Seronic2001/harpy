@@ -50,7 +50,8 @@ try {
     if (Test-Path $TmpFile) { Remove-Item $TmpFile -Force -ErrorAction SilentlyContinue }
 
     # 3. Asynchronous Download with Real-Time Animated Spinner
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls13 } catch {}
     $wc = New-Object System.Net.WebClient
     $wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) harpy-installer")
 
@@ -159,5 +160,5 @@ try {
     Write-Host ""
     Write-Host "  ✖ Installation failed: $_" -ForegroundColor Red
     Write-Host "    Tip: You can also install via: pip install harpy-cp" -ForegroundColor Yellow
-    exit 1
+    Write-Host ""
 }
