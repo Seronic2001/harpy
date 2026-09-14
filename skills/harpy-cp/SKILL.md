@@ -11,7 +11,7 @@ Follow this procedure whenever the user:
 
 ---
 
-## ⚠️ Critical Rules & Constraints
+## ⚠️ Critical Rules & Constraints (Zero Latency)
 
 1. ⛔ **NEVER SEARCH THE WEB**:
    - Do **NOT** use web search or browse online for the problem statement.
@@ -19,24 +19,27 @@ Follow this procedure whenever the user:
    - Web searches waste multiple agent turns, trigger permission dialogs, and cause significant latency.
    - Formulate everything directly from the user's provided image, screenshot, or text.
 
-2. ⛔ **NO REDUNDANT C++ REFERENCE SOLVERS**:
-   - Do **NOT** write, compile, or run a C++ reference solver in `scratch/`.
+2. ⛔ **NO PRE-FLIGHT EXPLORATION OR SCRATCH PRE-TESTING**:
+   - Do **NOT** run exploratory commands like `which harpy`, `find`, `ls`, `harpy --help`, or `harpy init`.
+   - Do **NOT** write temporary scripts in `scratch/` to manually test the Python oracle first.
+   - `harpy create` automatically runs and verifies the oracle across all test cases internally and will display any execution traceback if it fails.
+
+3. ⛔ **NO REDUNDANT C++ REFERENCE SOLVERS**:
+   - Do **NOT** write, compile, or run a C++ reference solver.
    - The Python reference oracle (`reference_code`) inside the specification automatically executes across all test cases and generates authoritative expected outputs with zero compilation overhead.
 
-3. ⛔ **USER IMPLEMENTS `solve(...)` (LeetCode-style)**:
+4. ⛔ **USER IMPLEMENTS `solve(...)` (LeetCode-style)**:
    - In `<problem_slug>.cpp`, input reading happens in `main()` with fast I/O and passes typed arguments to `solve(...)`.
    - **NEVER implement the algorithmic logic inside `solve(...)`**. The user writes their own algorithm.
 
 ---
 
-## ⚡ Fast-Path Protocol: 1-Command Problem Setup
+## ⚡ Direct 1-Turn Setup: Pipe JSON to `harpy create -`
 
-The fastest and most reliable way to set up a problem (avoiding MCP discovery latency or tool gaps) is using `harpy create`.
+Do not create intermediate scratch files. Execute problem setup in **a single terminal command** using a heredoc:
 
-### Step 1. Formulate `scratch/spec.json`
-Write a complete JSON specification to `scratch/spec.json`:
-
-```json
+```bash
+harpy create - << 'EOF'
 {
   "title": "Lexicographically Minimal Walk",
   "category": "graph-algorithms",
@@ -58,7 +61,12 @@ Write a complete JSON specification to `scratch/spec.json`:
     {"input": "...", "kind": "stress"}
   ]
 }
+EOF
 ```
+*(Fallback if `harpy` binary is not in PATH: `python3 -m harpy.cli create - << 'EOF'...`)*
+
+> [!TIP]
+> Notice that `testcases` only need `"input"` (and optional `"kind"` / `"explanation"`). You **do not** need to precompute `"output"`; Harpy's Python reference oracle automatically runs against each input and populates the authoritative expected outputs.
 
 #### CSES Categories:
 Classify into one of the 12 standard CSES categories:
@@ -75,14 +83,7 @@ Classify into one of the 12 standard CSES categories:
 - `introductory-problems` (simulation, basic loops)
 - `advanced-techniques`
 
-### Step 2. Execute `harpy create`
-Run the 1-step creation command in the terminal:
-```bash
-harpy create -s scratch/spec.json
-```
-*(Fallback if `harpy` binary is not in PATH: `python3 -m harpy.cli create -s scratch/spec.json`)*
-
-**What `harpy create` automatically accomplishes in 1 step:**
+**What `harpy create` automatically accomplishes in this 1 step:**
 1. Runs the Python `reference_code` across all test cases to verify and generate exact outputs.
 2. Scaffolds `problems/<category>/<slug>/` containing:
    - `problem.md` (LeetCode specification with LaTeX formulas)
@@ -91,8 +92,6 @@ harpy create -s scratch/spec.json
    - `problem.json`
 3. Writes `.cph/.<slug>.cpp_<hash>.prob` for offline testing.
 4. Attempts HTTP sync with active CPH extension listener on port 27121.
-
-*(Note: If MCP tool `harpy_setup_problem` is directly available in your session, you may call MCP tools directly as an alternative).*
 
 ---
 

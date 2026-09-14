@@ -18,7 +18,7 @@ class TestCase(BaseModel):
     __test__ = False
     id: int | str = 0
     input: str
-    output: str
+    output: str = ""
     kind: TestCaseKind = TestCaseKind.SAMPLE
     explanation: Optional[str] = None
 

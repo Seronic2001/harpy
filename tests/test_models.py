@@ -46,3 +46,12 @@ def test_competitive_companion_dict():
     assert len(cc["tests"]) == 1
     assert cc["tests"][0]["input"] == "4 9\n2 7 11 15\n"
     assert cc["tests"][0]["output"] == "0 1\n"
+
+
+def test_testcase_optional_output():
+    # Verify TestCase can be instantiated without output (for oracle generation)
+    tc = TestCase(input="10 20\n")
+    assert tc.output == ""
+    assert tc.normalized_output() == ""
+    assert tc.kind == TestCaseKind.SAMPLE
+
