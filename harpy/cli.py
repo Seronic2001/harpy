@@ -663,6 +663,13 @@ def cmd_setup_ai(args: argparse.Namespace) -> int:
         title="🤖 AI Integration",
         expand=False
     ))
+
+    if not shutil.which("harpy"):
+        console.print(
+            "\n[yellow]💡 Note:[/yellow] If 'harpy' is not recognized in your terminal yet, you can run any command using:"
+            "\n   [bold green]python -m harpy <command>[/bold green] (or [bold green]py -m harpy <command>[/bold green] on Windows)\n"
+        )
+
     return 0
 
 

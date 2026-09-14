@@ -32,51 +32,32 @@
 
 ### 1. Installation
 
-#### Option A: Standalone Binary (Recommended — Zero Python setup needed)
+#### Option A: 1-Command Installer (Recommended — Zero Python needed, auto-configures PATH)
 
-Harpy ships as a self-contained executable with no Python or virtual environment dependencies:
-
-- **Linux (x86_64)**:
+- **Linux & macOS**:
   ```bash
-  mkdir -p ~/.local/bin
-  curl -sSL https://github.com/Seronic2001/harpy/releases/latest/download/harpy-linux-x86_64 -o ~/.local/bin/harpy
-  chmod +x ~/.local/bin/harpy
+  curl -fsSL https://raw.githubusercontent.com/Seronic2001/harpy/master/install.sh | bash
   ```
 
-- **macOS (Apple Silicon M1/M2/M3/M4)**:
-  ```bash
-  mkdir -p ~/.local/bin
-  curl -sSL https://github.com/Seronic2001/harpy/releases/latest/download/harpy-macos-arm64 -o ~/.local/bin/harpy
-  chmod +x ~/.local/bin/harpy
+- **Windows (PowerShell)**:
+  ```powershell
+  irm https://raw.githubusercontent.com/Seronic2001/harpy/master/install.ps1 | iex
   ```
 
-- **Windows**:
-  Download `harpy-windows-x86_64.exe` from the [Latest Release](https://github.com/Seronic2001/harpy/releases/latest), rename to `harpy.exe`, and add to your `PATH`.
-
-> *Tip: Ensure `~/.local/bin` is in your `PATH` (e.g., `export PATH="$HOME/.local/bin:$PATH"`).*
-
-#### Option B: Via `pip` or `pipx`
+#### Option B: Via `pip`
 
 ```bash
-# Recommended: install globally via pipx (auto-configures PATH)
-pipx install harpy-cp
-
-# Or via standard pip
 pip install harpy-cp
 ```
 
-> **Windows Tip**: If `harpy` is not found after `pip install`, ensure your user Scripts directory (e.g. `%APPDATA%\Python\Python312\Scripts`) is added to your `PATH`, or use `pipx` which handles this automatically.
+> **Note**: If `harpy` is not recognized immediately in your terminal due to PATH settings, you can run any Harpy command directly using:
+> ```bash
+> python -m harpy setup-ai    # or 'py -m harpy setup-ai' on Windows
+> ```
 
-To update to the latest version:
+To upgrade Harpy:
 ```bash
-pipx upgrade harpy-cp
-# Or with pip:
 pip install --upgrade harpy-cp
-```
-
-Or install the latest development commit directly from GitHub:
-```bash
-pipx install --force git+https://github.com/Seronic2001/harpy.git
 ```
 
 ### 2. Configure AI & Shell Completion (1-Command Setup)
