@@ -111,6 +111,18 @@ try {
         Write-Host "$InstallDir is already in PATH" -ForegroundColor DarkGray
     }
 
+    # 5b. Create harpy.cmd shim in WindowsApps for instant availability
+    $WindowsApps = "$env:LOCALAPPDATA\Microsoft\WindowsApps"
+    if (Test-Path $WindowsApps) {
+        $ShimPath = "$WindowsApps\harpy.cmd"
+        $ShimContent = "@echo off`r`n`"$ExePath`" %*"
+        Set-Content -Path $ShimPath -Value $ShimContent -Encoding ASCII -ErrorAction SilentlyContinue
+        if (Test-Path $ShimPath) {
+            Write-Host "  ✔ Created instant shim: " -NoNewline -ForegroundColor Green
+            Write-Host "$ShimPath" -ForegroundColor DarkGray
+        }
+    }
+
     # 6. Success Card
     Write-Host ""
     Write-Host "  ╭──────────────────────────────────────────────────────────────╮" -ForegroundColor Cyan

@@ -49,6 +49,14 @@ try {
         Write-Host "  ✔ Removed Harpy from Windows User PATH" -ForegroundColor Green
     }
 
+    # 3b. Remove WindowsApps harpy.cmd shim
+    $ShimPath = "$env:LOCALAPPDATA\Microsoft\WindowsApps\harpy.cmd"
+    if (Test-Path $ShimPath) {
+        Remove-Item -Path $ShimPath -Force -ErrorAction SilentlyContinue
+        Write-Host "  ✔ Removed WindowsApps shim: " -NoNewline -ForegroundColor Green
+        Write-Host "$ShimPath" -ForegroundColor White
+    }
+
     # 4. Clean PowerShell Profile ($PROFILE) if modified
     if ($PROFILE -and (Test-Path $PROFILE)) {
         $ProfileContent = Get-Content $PROFILE -Raw

@@ -94,8 +94,15 @@ class SolutionRunner:
 
         if self.lang == "cpp":
             out_bin = Path(self.temp_dir) / "solution_bin"
+            compiler = shutil.which("g++") or shutil.which("clang++")
+            if not compiler:
+                return False, (
+                    "No C++ compiler found. Install g++ or clang++, or use Python:\n"
+                    "  harpy test solution.py\n"
+                    "  harpy create --lang py ..."
+                )
             cmd = [
-                "g++",
+                compiler,
                 "-O3",
                 "-std=c++17",
                 str(self.source_path),

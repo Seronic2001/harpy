@@ -47,10 +47,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,mcp]" pyinstaller
 
-      - name: Create entry script
+      - name: Verify entry script exists
         shell: bash
         run: |
-          echo "from harpy.cli import main; import sys; sys.exit(main())" > entry.py
+          cat entry.py
 
       - name: Build standalone executable with PyInstaller
         shell: bash
