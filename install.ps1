@@ -41,14 +41,25 @@ try {
     Write-Host "  ✔ Detected platform: " -NoNewline -ForegroundColor Green
     Write-Host "Windows ($ArchLabel)" -ForegroundColor White
 
-    # 2. Prepare Directory
+    # 2. Stop any running Harpy processes to release file locks (e.g. background workers from --async)
+    $harpyProcs = Get-Process -Name "harpy" -ErrorAction SilentlyContinue
+    if ($harpyProcs) {
+        $harpyProcs | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 400
+    }
+
     if (-not (Test-Path $InstallDir)) {
         New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     }
 
     # Remove existing binary to ensure clean install
     if (Test-Path $ExePath) {
-        Remove-Item -Path $ExePath -Force -ErrorAction SilentlyContinue
+        for ($retry = 0; $retry -lt 3; $retry++) {
+            Remove-Item -Path $ExePath -Force -ErrorAction SilentlyContinue
+            if (-not (Test-Path $ExePath)) { break }
+            Get-Process -Name "harpy" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 300
+        }
     }
 
     # 3. Download with animated spinner
@@ -117,6 +128,9 @@ try {
         Write-Host "$InstallDir" -ForegroundColor Cyan
         $PathUpdated = $true
     } else {
+        if ($env:PATH -notlike "*$InstallDir*") {
+            $env:PATH += ";$InstallDir"
+        }
         Write-Host "  ✔ Shell PATH: " -NoNewline -ForegroundColor Green
         Write-Host "$InstallDir is already in PATH" -ForegroundColor DarkGray
     }

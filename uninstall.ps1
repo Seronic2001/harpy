@@ -21,6 +21,14 @@ try {
     $GeminiSkill = "$env:USERPROFILE\.gemini\config\skills\harpy-cp"
     $GeminiMcp = "$env:USERPROFILE\.gemini\config\mcp_config.json"
 
+    # 0. Stop any running Harpy processes to release file locks (e.g. background workers from --async)
+    $harpyProcs = Get-Process -Name "harpy" -ErrorAction SilentlyContinue
+    if ($harpyProcs) {
+        Write-Host "  ▸ Stopping running Harpy processes..." -ForegroundColor DarkGray
+        $harpyProcs | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 500
+    }
+
     # 1. Uninstall pip/pipx packages if present
     Write-Host "  ▸ Checking pip / pipx installations..." -ForegroundColor DarkGray
     $pipCmd = Get-Command "pip" -ErrorAction SilentlyContinue
@@ -49,9 +57,23 @@ try {
 
     # 2. Remove Standalone Executable Directory
     if (Test-Path $InstallDir) {
-        Remove-Item -Path $InstallDir -Recurse -Force -ErrorAction SilentlyContinue
-        Write-Host "  ✔ Removed binary folder: " -NoNewline -ForegroundColor Green
-        Write-Host "$InstallDir" -ForegroundColor White
+        $deleted = $false
+        for ($retry = 0; $retry -lt 3; $retry++) {
+            Remove-Item -Path $InstallDir -Recurse -Force -ErrorAction SilentlyContinue
+            if (-not (Test-Path $InstallDir)) {
+                $deleted = $true
+                break
+            }
+            # Re-kill if any stubborn subprocess revived
+            Get-Process -Name "harpy" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Milliseconds 400
+        }
+        if ($deleted -or -not (Test-Path $InstallDir)) {
+            Write-Host "  ✔ Removed binary folder: " -NoNewline -ForegroundColor Green
+            Write-Host "$InstallDir" -ForegroundColor White
+        } else {
+            Write-Host "  ⚠ Could not fully remove $InstallDir (files may be locked by running process)" -ForegroundColor Yellow
+        }
     }
 
     # 3. Clean User PATH in Environment Registry
@@ -70,6 +92,13 @@ try {
         Write-Host "  ✔ Removed WindowsApps shim: " -NoNewline -ForegroundColor Green
         Write-Host "$ShimPath" -ForegroundColor White
     }
+
+    # 3c. Clean in-memory PATH and command cache in the current PowerShell session
+    if ($env:Path -like "*$InstallDir*") {
+        $env:Path = ($env:Path -split ';' | Where-Object { $_ -ne $InstallDir -and $_ -ne "" }) -join ';'
+    }
+    Remove-Item alias:harpy -ErrorAction SilentlyContinue
+    Remove-Item function:harpy -ErrorAction SilentlyContinue
 
     # 4. Clean PowerShell Profile ($PROFILE) if modified
     if ($PROFILE -and (Test-Path $PROFILE)) {
