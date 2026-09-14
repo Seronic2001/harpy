@@ -57,10 +57,15 @@ Harpy ships as a self-contained executable with no Python or virtual environment
 
 ```bash
 # Recommended: install globally via pipx
-pipx install git+https://github.com/Seronic2001/harpy.git
+pipx install harpy-cp
 
 # Or via standard pip
-pip install git+https://github.com/Seronic2001/harpy.git
+pip install harpy-cp
+```
+
+Or install the latest commit directly from GitHub:
+```bash
+pipx install git+https://github.com/Seronic2001/harpy.git
 ```
 
 To update to the latest version later:
