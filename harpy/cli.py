@@ -32,7 +32,7 @@ _harpy_completions()
         cword=$COMP_CWORD
     fi
 
-    local commands="init test push setup-ai completion --help --version"
+    local commands="init create new test push setup-ai completion --help --version"
 
     if [ "$cword" -eq 1 ]; then
         COMPREPLY=( $(compgen -W "$commands" -- "$cur") )
@@ -40,6 +40,19 @@ _harpy_completions()
     fi
 
     case "${words[1]}" in
+        create|new)
+            local files=""
+            for f in *.json; do
+                if [ -f "$f" ]; then
+                    files+="$f "
+                fi
+            done
+            COMPREPLY=( $(compgen -W "$files" -- "$cur") )
+            if [ ${#COMPREPLY[@]} -eq 0 ]; then
+                COMPREPLY=( $(compgen -f -- "$cur") )
+            fi
+            return 0
+            ;;
         test)
             local candidates=""
             # 1. Solution files in current directory
@@ -270,6 +283,140 @@ def cmd_push(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_create(args: argparse.Namespace) -> int:
+    """Create and scaffold a competitive programming problem workspace from a JSON specification or CLI arguments."""
+    spec_target = getattr(args, "spec_opt", None) or getattr(args, "spec_pos", None)
+
+    spec_data: dict = {}
+    if spec_target == "-":
+        try:
+            raw = sys.stdin.read()
+            if not raw.strip():
+                console.print("[bold red]Error: Received empty input from stdin.[/bold red]")
+                return 1
+            spec_data = json.loads(raw)
+        except Exception as e:
+            console.print(f"[bold red]Error reading JSON from stdin:[/bold red] {e}")
+            return 1
+    elif spec_target:
+        p = Path(spec_target)
+        if not p.is_file():
+            console.print(f"[bold red]Error: Specification file not found:[/bold red] {spec_target}")
+            return 1
+        try:
+            spec_data = json.loads(p.read_text(encoding="utf-8"))
+        except Exception as e:
+            console.print(f"[bold red]Error reading JSON from {spec_target}:[/bold red] {e}")
+            return 1
+    elif not sys.stdin.isatty():
+        try:
+            raw = sys.stdin.read()
+            if raw.strip():
+                spec_data = json.loads(raw)
+        except Exception:
+            pass
+
+    # CLI flag overrides
+    if getattr(args, "title", None):
+        spec_data["title"] = args.title
+    if getattr(args, "category", None):
+        spec_data["category"] = args.category
+    if getattr(args, "difficulty", None) and ("difficulty" not in spec_data or args.difficulty != "Medium"):
+        spec_data["difficulty"] = args.difficulty
+    if getattr(args, "tags", None):
+        spec_data["tags"] = [t.strip() for t in args.tags.split(",") if t.strip()]
+
+    if getattr(args, "oracle", None):
+        oracle_path = Path(args.oracle)
+        if oracle_path.is_file():
+            spec_data["reference_code"] = oracle_path.read_text(encoding="utf-8")
+        else:
+            console.print(f"[bold red]Error: Oracle script not found:[/bold red] {args.oracle}")
+            return 1
+
+    if not spec_data.get("title"):
+        console.print("[bold red]Error: Problem title is required (provide in spec JSON or with --title).[/bold red]")
+        return 1
+
+    try:
+        spec = ProblemSpec.model_validate(spec_data)
+    except Exception as e:
+        console.print(f"[bold red]Error validating ProblemSpec:[/bold red] {e}")
+        return 1
+
+    # 1. Oracle testcase verification if reference_code is present
+    if spec.reference_code and spec.testcases:
+        raw_inputs = [
+            (tc.normalized_input(), tc.kind, tc.explanation)
+            for tc in spec.testcases
+        ]
+        try:
+            console.print("[cyan]Running Python reference oracle across test cases...[/cyan]")
+            verified_cases = verify_and_generate_testcases(
+                spec.reference_code, raw_inputs, timeout_sec=float(spec.time_limit_ms) / 1000.0 + 2.0
+            )
+            spec.testcases = verified_cases
+            console.print(f"[bold green]✔ Verified {len(verified_cases)} test cases with reference oracle.[/bold green]")
+        except Exception as e:
+            console.print(f"[bold red]Oracle verification failed:[/bold red] {e}")
+            return 1
+
+    # 2. Create problem workspace
+    lang = getattr(args, "lang", "cpp") or "cpp"
+    base_dir = getattr(args, "base_dir", ".") or "."
+    ws = create_problem_workspace(
+        spec,
+        base_dir=base_dir,
+        category=spec.category,
+        lang=lang,
+    )
+
+    # 3. Write offline CPH file
+    write_cph_file(spec, ws["solution"])
+
+    # 4. Dispatch to CPH if requested
+    cph_status = "[dim]offline .cph created[/dim]"
+    if not getattr(args, "no_cph", False):
+        res = dispatch_to_cph(spec, ports=[args.port] if getattr(args, "port", None) else None)
+        if res.get("success"):
+            cph_status = f"[bold green]✔ Synced with CPH ({res.get('port')})[/bold green]"
+        else:
+            cph_status = "[dim]CPH listener not active (offline .cph configured)[/dim]"
+
+    # 5. Output Rich panel
+    category_name = spec.get_category()
+    slug = spec.get_slug()
+    rel_sol = ws["solution"]
+    try:
+        rel_sol = rel_sol.relative_to(Path.cwd())
+    except ValueError:
+        pass
+
+    rel_md = ws["markdown"]
+    try:
+        rel_md = rel_md.relative_to(Path.cwd())
+    except ValueError:
+        pass
+
+    summary_text = (
+        f"[bold]Title:[/bold] {spec.title}\n"
+        f"[bold]Category:[/bold] [yellow]{category_name}[/yellow]\n"
+        f"[bold]Difficulty:[/bold] {spec.difficulty}\n"
+        f"[bold]Specification:[/bold] [link=file://{ws['markdown'].resolve()}]{rel_md}[/link]\n"
+        f"[bold]Starter Code:[/bold] [link=file://{ws['solution'].resolve()}]{rel_sol}[/link]\n"
+        f"[bold]Test Cases:[/bold] {len(spec.testcases)} cases in {ws['tests_dir'].name}/\n"
+        f"[bold]CPH Integration:[/bold] {cph_status}\n\n"
+        f"⚡ [bold green]Ready to solve![/bold green] Run: [bold cyan]harpy test {slug}[/bold cyan]"
+    )
+
+    console.print(Panel(
+        summary_text,
+        title=f"🚀 Problem Created: [bold cyan]{slug}[/bold cyan]",
+        expand=False,
+    ))
+    return 0
+
+
 def cmd_completion(args: argparse.Namespace) -> int:
     """Generate or install shell completion script."""
     shell = args.shell.lower() if args.shell else "bash"
@@ -352,8 +499,13 @@ def cmd_setup_ai(args: argparse.Namespace) -> int:
         except Exception:
             mcp_config = {}
 
-    mcp_servers = mcp_config.setdefault("mcpServers", {})
-    python_exe = sys.executable
+    import shutil
+    python_exe = (
+        shutil.which("python3")
+        or shutil.which("python")
+        if getattr(sys, "frozen", False)
+        else sys.executable
+    )
     mcp_servers["harpy"] = {
         "command": python_exe,
         "args": ["-m", "harpy.mcp_server"],
@@ -396,6 +548,40 @@ def main() -> int:
     # Init workspace
     subparsers.add_parser("init", help="Initialize current folder for DSA practice with Harpy")
 
+    # Create problem
+    create_parser = subparsers.add_parser(
+        "create",
+        aliases=["new"],
+        help="Create and scaffold a problem from a JSON specification or flags",
+    )
+    create_parser.add_argument(
+        "spec_pos",
+        nargs="?",
+        default=None,
+        help="Path to problem_spec.json (or '-' for stdin)",
+    )
+    create_parser.add_argument(
+        "-s",
+        "--spec",
+        dest="spec_opt",
+        help="Path to problem_spec.json (or '-' for stdin)",
+    )
+    create_parser.add_argument("--title", help="Problem title")
+    create_parser.add_argument(
+        "--category", help="CSES category (e.g. dynamic-programming, graph-algorithms)"
+    )
+    create_parser.add_argument(
+        "--difficulty", default="Medium", help="Difficulty (Easy/Medium/Hard)"
+    )
+    create_parser.add_argument("--tags", help="Comma-separated topics/tags")
+    create_parser.add_argument("--oracle", help="Path to Python reference solver script")
+    create_parser.add_argument("--lang", default="cpp", help="Starter code language (cpp/py)")
+    create_parser.add_argument("--base-dir", default=".", help="Base directory for problems")
+    create_parser.add_argument(
+        "--no-cph", action="store_true", help="Skip dispatching to CPH listener"
+    )
+    create_parser.add_argument("--port", type=int, help="Target CPH listener port")
+
     # Test runner
     test_parser = subparsers.add_parser("test", help="Test a solution against test cases")
     test_parser.add_argument("solution", help="Solution file, problem slug, or directory")
@@ -420,7 +606,9 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    if args.command == "init":
+    if args.command in ("create", "new"):
+        return cmd_create(args)
+    elif args.command == "init":
         return cmd_init(args)
     elif args.command == "test":
         return cmd_test(args)

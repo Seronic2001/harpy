@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from typing import List, Optional, Tuple
 from harpy.models import TestCase, TestCaseKind
+
+
+def get_python_interpreter() -> str:
+    """Get path to a Python interpreter, safe for both virtualenv and PyInstaller frozen binaries."""
+    if getattr(sys, "frozen", False):
+        return shutil.which("python3") or shutil.which("python") or "python3"
+    return sys.executable
 
 
 class OracleExecutionError(Exception):
@@ -32,7 +40,7 @@ def run_reference_solution(
 
     try:
         proc = subprocess.run(
-            [sys.executable, temp_path],
+            [get_python_interpreter(), temp_path],
             input=raw_input,
             capture_output=True,
             text=True,

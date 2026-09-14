@@ -125,7 +125,13 @@ class SolutionRunner:
         if self.lang == "cpp":
             cmd = [str(self.compiled_target)]
         elif self.lang == "python":
-            cmd = [sys.executable, str(self.source_path)]
+            py_exe = (
+                shutil.which("python3")
+                or shutil.which("python")
+                if getattr(sys, "frozen", False)
+                else sys.executable
+            )
+            cmd = [py_exe, str(self.source_path)]
         elif self.lang == "java":
             cmd = ["java", "-cp", str(self.compiled_target), self.source_path.stem]
         else:

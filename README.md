@@ -71,6 +71,19 @@ harpy init
 - Scaffolds a `problems/` directory.
 - Configures `.tabignore` and `.antigravityignore` so inline ghost AI suggestions don't distract you while solving problems.
 
+### Create & Scaffold Problems (1-Command Setup)
+Create a categorized problem workspace, run reference oracle test verification, and sync to CPH in a single command:
+```bash
+# From a JSON specification file
+harpy create -s spec.json
+
+# Or pipe specification directly via stdin
+cat spec.json | harpy create -
+
+# Or quick flag-based setup
+harpy create --title "Two Sum" --category "sorting-and-searching" --difficulty "Easy"
+```
+
 ### Test Solutions Locally
 ```bash
 # Auto-resolves problem slugs and files inside problems/
