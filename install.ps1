@@ -84,7 +84,17 @@ try {
     }
 
     $finalSize = [Math]::Round((Get-Item $TmpFile).Length / 1MB, 1)
-    Move-Item -Path $TmpFile -Destination $ExePath -Force
+    # Remove existing binary first to avoid "file already exists" errors
+    if (Test-Path $ExePath) {
+        Remove-Item -Path $ExePath -Force -ErrorAction SilentlyContinue
+    }
+    try {
+        Move-Item -Path $TmpFile -Destination $ExePath -Force
+    } catch {
+        # Fallback: copy then delete if move fails (e.g. cross-drive or locked)
+        Copy-Item -Path $TmpFile -Destination $ExePath -Force
+        Remove-Item -Path $TmpFile -Force -ErrorAction SilentlyContinue
+    }
     Write-Host "`r  ✔ Downloaded Harpy standalone binary ($finalSize MB)            " -ForegroundColor Green
 
     # 4. Verify Execution
