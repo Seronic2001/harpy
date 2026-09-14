@@ -55,7 +55,27 @@ jobs:
       - name: Build standalone executable with PyInstaller
         shell: bash
         run: |
-          pyinstaller --onefile --name "${{ matrix.asset_name }}" --paths . --clean entry.py
+          pyinstaller --onefile \
+            --name "${{ matrix.asset_name }}" \
+            --paths . \
+            --clean \
+            --strip \
+            --exclude-module tkinter \
+            --exclude-module sqlite3 \
+            --exclude-module multiprocessing \
+            --exclude-module unittest \
+            --exclude-module pytest \
+            --exclude-module pydoc \
+            --exclude-module pydoc_data \
+            --exclude-module xmlrpc \
+            --exclude-module smtplib \
+            --exclude-module ftplib \
+            --exclude-module distutils \
+            --exclude-module setuptools \
+            --exclude-module pip \
+            --exclude-module wheel \
+            --exclude-module test \
+            entry.py
 
       - name: Verify binary executes
         shell: bash
