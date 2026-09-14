@@ -64,7 +64,7 @@ try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls13 } catch {}
         $ProgressPreference = 'SilentlyContinue'
-        Invoke-WebRequest -Uri $uri -OutFile $out -UseBasicParsing
+        Invoke-WebRequest -Uri $uri -OutFile $out -UseBasicParsing -Headers @{"Cache-Control"="no-cache"}
     } -ArgumentList $Url, $ExePath
 
     # Animate spinner while download runs
